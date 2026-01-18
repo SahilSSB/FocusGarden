@@ -9,13 +9,20 @@ World::World() {
 }
 
 void World::init() {
-    if(!mTileTexture.loadFromFile("tiles/tile-1.png")) {
+    if(!mTileTexture.loadFromFile("textures/tiles/tile-1.png")) {
         throw runtime_error("Failed to load tile texture. Is it in the correct folder?");
     }
-    if (!mTreeTexture.loadFromFile("treetexture.png")) {
-        throw runtime_error("Failed to load tree textue. Is it in the correct folder");
-    }
+    bool s1 = mTreeSappling.loadFromFile("textures/plants/tree_small.png");
+    bool s2 = mTreeMedium.loadFromFile("textures/plants/tree_medium.png");
+    bool s3 = mTreeMature.loadFromFile("textures/plants/tree_large.png");
 
+    if (!s1 || !s2 || !s3) {
+        if(!mTreeSappling.loadFromFile("textures/plants/tree_small.png") ||
+            mTreeMedium.loadFromFile("textures/plants/tree_medium.png") ||
+            mTreeMature.loadFromFile("textures/plants/tree_large.png")) {
+                throw runtime_error("Failed to load of the tree textures (small/medium/lage). Is it in the correct folder?");
+            }
+    }
     mGrid.clear();
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -24,10 +31,7 @@ void World::init() {
             tile.y = y;
 
             tile.hasTree = false;
-
-            //if (x == y) {
-              //tile.hasTree = true;
-            //}
+            tile.growthState = tile.hasTree ? 1.f : 0.f;
             mGrid.push_back(tile);
         }
     }
@@ -92,8 +96,19 @@ void World::init() {
     }
 }
 
-void World::update(Time dt) {
+void World::update(Time dt, bool isFocussing) {
+    if (!isFocussing) return;
 
+    float growthSpeed = 1.f / 10.f;
+    for (auto& tile : mGrid) {
+        if (tile.hasTree) {
+            if (tile.growthState < 1.f) {
+                tile.growthState += growthSpeed * dt.asSeconds();
+
+                if (tile.growthState > 1.f) tile.growthState = 1.f;
+            }
+        }
+    }
 }
 
 Vector2f World::gridToIso(int x, int y) {
@@ -119,8 +134,11 @@ void World::toggleTree(int x, int y) {
         int index = x + y * MAP_WIDTH;
         if (index >=0 && index < mGrid.size()) {
             mGrid[index].hasTree = !mGrid[index].hasTree;
+        
+        if (mGrid[index].hasTree) {
+            mGrid[index].growthState = 0.f;
+            }
         }
-        //cout << "Toggled tree at " << x << "," << y << "\n";
     }
 }
 
@@ -130,17 +148,39 @@ void World::draw(RenderTarget& target) {
 
     for (const auto& tile : mGrid) {
         if (tile.hasTree) {
-            Sprite tree(mTreeTexture);
+            Texture* currentTexture;
+            float verticaloffset = 0.f;
+            float offset = 0.f;
+            float treeHeight = TILE_HEIGHT * 2.f;
+            if (tile.growthState < 0.33f) {
+                currentTexture = &mTreeSappling;
+                offset = +10.f;
+                verticaloffset = TILE_HEIGHT / 2.f;
+                treeHeight = treeHeight;
+            }
+            else if (tile.growthState < 0.66f) {
+                currentTexture = &mTreeMedium;
+                offset = +19.f;
+                verticaloffset = TILE_HEIGHT / 2.f;
+                treeHeight = treeHeight * 2.f;
+            }
+            else {
+                currentTexture = &mTreeMature;
+                offset = +4.5f;
+                verticaloffset = TILE_HEIGHT;
+                treeHeight = treeHeight * 3.f;
+            }
+
+            Sprite tree(*currentTexture);
 
             Vector2f pos = gridToIso(tile.x, tile.y);
             FloatRect bounds = tree.getLocalBounds();
-            tree.setOrigin({bounds.size.x / 2.f, bounds.size.y});
-
-            float treeHeight = TILE_HEIGHT * 4.f;
+            tree.setOrigin({bounds.size.x / 2.f , bounds.size.y});
+            float centerX = pos.x;
+            float centerY = pos.y;
             float scaleFactor = treeHeight / bounds.size.y;
-            tree.setScale({scaleFactor, scaleFactor});
-
-            tree.setPosition({pos.x, pos.y + TILE_HEIGHT});
+            tree.setScale({scaleFactor, scaleFactor}); 
+            tree.setPosition({pos.x, pos.y + verticaloffset + offset});
             target.draw(tree);
         }
     }

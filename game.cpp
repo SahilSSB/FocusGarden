@@ -1,14 +1,42 @@
 #include <SFML/Graphics.hpp>
 #include <optional>
+#include <string>
+#include <iostream>
 #include "Game.h"
 using namespace std;
 using namespace sf;
 
 Game::Game() 
-        : mWindow(VideoMode({800,600}), "Focus Garden")
+        : mWindow(VideoMode({800,600}), "Focus Garden"),
+        mState(GameState::ROAMING),
+        mTimerText(mFont),
+        mStatusText(mFont)
 {
     mWindow.setFramerateLimit(60);
-    mWorld.init();
+    
+    try {
+        mWorld.init();
+        if (!mFont.openFromFile("fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf")) {
+            cerr << "WARNING: font not found" << endl;
+        }
+        mTimerText.setCharacterSize(40);
+        mTimerText.setPosition({20.f, 20.f});
+        mTimerText.setFillColor(Color::White);
+        mTimerText.setOutlineColor(Color::Black);
+        mTimerText.setOutlineThickness(2.f);
+        mTimerText.setString("25:00");
+
+        mStatusText.setCharacterSize(20);
+        mStatusText.setPosition({20.f, 70.f});
+        mStatusText.setFillColor(Color::Yellow);
+        mStatusText.setOutlineColor(Color::Black);
+        mStatusText.setOutlineThickness(1.f);
+        mStatusText.setString("Press SPACE to start Focus");
+    }
+    catch (const exception& e) {
+    cerr << "Error: " << e.what() << endl;
+    mWindow.close();
+    }
 }
 
 void Game::run() {
@@ -18,6 +46,7 @@ void Game::run() {
     while (mWindow.isOpen()) {
         processEvents();
         Time dt = clock.restart();
+        processEvents();
         update(dt);
 
         render();
@@ -31,22 +60,54 @@ void Game::processEvents() {
         }
         else if (const auto* mousePress = event->getIf<Event::MouseButtonPressed>()) {
             if (mousePress->button == Mouse::Button::Left) {
-                Vector2i mousePos = mousePress->position;
-                Vector2i gridPos = mWorld.isoToGrid(static_cast<float>(mousePos.x),
-                                                    static_cast<float>(mousePos.y));
-                mWorld.toggleTree(gridPos.x, gridPos.y);
+                if (!mIsFocussing) {
+                    Vector2i mousePos = mousePress->position;
+                    Vector2i gridPos = mWorld.isoToGrid(static_cast<float>(mousePos.x),
+                                                        static_cast<float>(mousePos.y));
+                    mWorld.toggleTree(gridPos.x, gridPos.y);
+                }
+            }
+        }
+        else if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
+            if (keyPress->scancode == Keyboard::Scancode::Space) {
+                mIsFocussing = !mIsFocussing;
+                if (mIsFocussing) {
+                    mFocusTimer = TARGET_TIME;
+                    mStatusText.setString("FOCUSSING... (Planting Locked)");
+                    mStatusText.setFillColor(Color::Green);
+                }
+                else {
+                    mStatusText.setString("Paused");
+                    mStatusText.setFillColor(Color::Black);
+                }
             }
         }
     }
 }
 
 void Game::update(Time dt) {
-    mWorld.update(dt);
-
+    if (mIsFocussing) {
+        mFocusTimer -= dt.asSeconds();
+        if (mFocusTimer <= 0.f) {
+            mFocusTimer = 0.f;
+            mIsFocussing = false;
+            mStatusText.setString("SESSION COMPLETE!");
+        }
+    }
+    int minutes = static_cast<int>(mFocusTimer) / 60;
+    int seconds = static_cast<int>(mFocusTimer) % 60;
+    string timeStr = to_string(minutes) + ":";
+    if (seconds < 10) timeStr += "0";
+    timeStr += to_string(seconds);
+    mTimerText.setString(timeStr);
+    
+    mWorld.update(dt, mIsFocussing);
 }
 
 void Game::render() {
     mWindow.clear(sf::Color(135, 206, 235));
     mWorld.draw(mWindow);
+    mWindow.draw(mTimerText);
+    mWindow.draw(mStatusText);
     mWindow.display();
 }

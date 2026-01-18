@@ -1,7 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include "World.h"
-using namespace sf;
 using namespace std;
 
 enum GameState {
@@ -18,9 +17,16 @@ class Game {
         void processEvents();
         void update(Time dt);
         void render();
-    RenderWindow mWindow;
+
+    sf::RenderWindow mWindow;
     GameState mState;
     World mWorld;
 
-    Time mFocusTimer;
+    bool mIsFocussing = false;
+    float mFocusTimer = 0.f;
+    const float TARGET_TIME = 0.166f * 60.f;
+
+    sf::Font mFont;
+    sf::Text mTimerText;
+    sf::Text mStatusText;
 };

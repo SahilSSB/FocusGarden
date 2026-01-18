@@ -39,6 +39,8 @@ class World {
 
         //resources
         Texture mTileTexture;
-        Texture mTreeTexture;
+        Texture mTreeSappling;
+        Texture mTreeMedium;
+        Texture mTreeMature;
 
 };
