@@ -7,13 +7,15 @@ using namespace sf;
 struct Tile {
     int x, y;
     bool hasTree;
+
+    float growthState = 0.0f;
 };
 
 class World {
     public:
         World();
         void init();
-        void update(Time dt);
+        void update(Time dt, bool isFocussing);
         void draw(RenderTarget& target);
 
         //math
