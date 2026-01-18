@@ -90,6 +90,19 @@ void Game::processEvents() {
                 }
             }
         }
+        else if (const auto* mouseMove = event->getIf<Event::MouseMoved>()) {
+            if (!mIsFocussing) {
+                Vector2i pixelPos = mouseMove->position;
+                Vector2f worldPos = mWindow.mapPixelToCoords(pixelPos, mWorldView);
+                Vector2i gridPos = mWorld.isoToGrid(worldPos.x, worldPos.y);
+
+                mWorld.setHoveredTile(gridPos);
+            }
+            else {
+                mWorld.setHoveredTile({-1, -1});
+            }
+            
+        }
         else if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
             if (keyPress->scancode == Keyboard::Scancode::Space) {
                 mIsFocussing = !mIsFocussing;

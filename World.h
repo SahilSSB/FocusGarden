@@ -17,6 +17,7 @@ class World {
         void init();
         void update(Time dt, bool isFocussing);
         void draw(RenderTarget& target);
+        void setHoveredTile(Vector2i gridPos);
 
         FloatRect getBounds();
         //math
@@ -35,6 +36,8 @@ class World {
         const float TILE_WIDTH = 32.f;
         const float TILE_DEPTH = 20.f;
 
+        ConvexShape mHoverShape;
+        
         vector<Tile> mGrid;
         VertexArray mTerrainMesh;
 

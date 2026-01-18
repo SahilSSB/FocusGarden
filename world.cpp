@@ -27,9 +27,19 @@ void World::init() {
                 throw runtime_error("Failed to load of the tree textures (small/medium/lage). Is it in the correct folder?");
             }
     }
+    mHoverShape.setPointCount(4);
+    mHoverShape.setPoint(0, {0.f, 0.f});
+    mHoverShape.setPoint(1, {TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
+    mHoverShape.setPoint(2, {0.f, TILE_HEIGHT});
+    mHoverShape.setPoint(3, {-TILE_WIDTH /2.f, TILE_HEIGHT / 2.f});
+
+    mHoverShape.setFillColor(Color(48, 48, 48,50));
+    mHoverShape.setOutlineColor(Color(48, 48, 48,100));
+    mHoverShape.setOutlineThickness(1.f);
+
     mGrid.clear();
-    for (int x = 0; x < MAP_WIDTH; x++) {
-        for (int y = 0; y < MAP_HEIGHT; y++) {
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
             Tile tile;
             tile.x = x;
             tile.y = y;
@@ -46,8 +56,8 @@ void World::init() {
     mTerrainMesh.resize(MAP_WIDTH * MAP_HEIGHT * 18);
 
     //populate array 
-    for (int x = 0; x < MAP_WIDTH; x++) {
-        for (int y = 0; y < MAP_HEIGHT; y++) {
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
             float isoX = (x - y) * (TILE_WIDTH / 2.f);
             float isoY = (x + y) * (TILE_HEIGHT / 2.f);
 
@@ -131,7 +141,7 @@ Vector2i World::isoToGrid(float x, float y) {
 
     int gridX = static_cast<int>((adjY / halfH + adjX / halfW) / 2.f);
     int gridY = static_cast<int>((adjY/ halfH - adjX / halfW) / 2.f);
-    return Vector2i(gridY, gridX);
+    return Vector2i(gridX, gridY);
 }
 
 void World::toggleTree(int x, int y) {
@@ -150,6 +160,8 @@ void World::toggleTree(int x, int y) {
 
 void World::draw(RenderTarget& target) {
     target.draw(mTerrainMesh, &mTileTexture);
+
+    target.draw(mHoverShape);
 
     for (const auto& tile : mGrid) {
         if (tile.hasTree) {
@@ -188,5 +200,21 @@ void World::draw(RenderTarget& target) {
             tree.setPosition({pos.x, pos.y + verticaloffset + offset});
             target.draw(tree);
         }
+    }
+}
+
+void World::setHoveredTile(Vector2i gridPos) {
+    if (gridPos.x >= 0 && gridPos.x < MAP_WIDTH &&
+        gridPos.y >= 0 && gridPos.y < MAP_HEIGHT) {
+
+            Vector2f pos = gridToIso(gridPos.x, gridPos.y);
+            mHoverShape.setPosition(pos);
+
+            mHoverShape.setFillColor(Color(48, 48, 48,50));
+            mHoverShape.setOutlineColor(Color(48, 48, 48,100));
+        }
+    else {
+        mHoverShape.setFillColor(Color::Transparent);
+        mHoverShape.setOutlineColor(Color::Transparent);
     }
 }
