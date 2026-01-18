@@ -32,6 +32,13 @@ Game::Game()
         mStatusText.setOutlineColor(Color::Black);
         mStatusText.setOutlineThickness(1.f);
         mStatusText.setString("Press SPACE to start Focus");
+        
+        FloatRect mapBounds = mWorld.getBounds();
+        mWorldView = mWindow.getDefaultView();
+        mWorldView.setCenter(mapBounds.getCenter());
+        mWorldView.zoom(1.2f);
+
+        mUIView = mWindow.getDefaultView();
     }
     catch (const exception& e) {
     cerr << "Error: " << e.what() << endl;
@@ -58,12 +65,27 @@ void Game::processEvents() {
         if (event->is<Event::Closed>()) {
             mWindow.close();
         }
+        else if (const auto* resized = event->getIf<Event::Resized>()) {
+            float w = static_cast<float>(resized->size.x);
+            float h = static_cast<float>(resized->size.y);
+            
+            mUIView.setSize({w, h});
+            mUIView.setCenter({w / 2.f, h / 2.f});
+            FloatRect mapBounds = mWorld.getBounds();
+            float mapHeight = mapBounds.size.y;
+
+            float desiredZoom = mapHeight / (w / 2.f);
+            
+            mWorldView.setSize({w * desiredZoom, h * desiredZoom});
+            mWorldView.setCenter(mapBounds.getCenter());
+        }
         else if (const auto* mousePress = event->getIf<Event::MouseButtonPressed>()) {
             if (mousePress->button == Mouse::Button::Left) {
                 if (!mIsFocussing) {
-                    Vector2i mousePos = mousePress->position;
-                    Vector2i gridPos = mWorld.isoToGrid(static_cast<float>(mousePos.x),
-                                                        static_cast<float>(mousePos.y));
+                    Vector2i pixelPos = mousePress->position;
+                    Vector2f worldPos = mWindow.mapPixelToCoords(pixelPos, mWorldView);
+                    Vector2i gridPos = mWorld.isoToGrid(static_cast<float>(worldPos.x),
+                                                        static_cast<float>(worldPos.y));
                     mWorld.toggleTree(gridPos.x, gridPos.y);
                 }
             }
@@ -106,8 +128,12 @@ void Game::update(Time dt) {
 
 void Game::render() {
     mWindow.clear(sf::Color(135, 206, 235));
+    mWindow.setView(mWorldView);
     mWorld.draw(mWindow);
+
+    mWindow.setView(mUIView);
     mWindow.draw(mTimerText);
     mWindow.draw(mStatusText);
+
     mWindow.display();
 }

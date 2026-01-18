@@ -21,7 +21,9 @@ class Game {
     sf::RenderWindow mWindow;
     GameState mState;
     World mWorld;
-
+    sf::View mWorldView;
+    sf::View mUIView;
+    
     bool mIsFocussing = false;
     float mFocusTimer = 0.f;
     const float TARGET_TIME = 0.166f * 60.f;

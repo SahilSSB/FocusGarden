@@ -8,6 +8,10 @@ World::World() {
 
 }
 
+FloatRect World::getBounds() {
+return mTerrainMesh.getBounds();
+}
+
 void World::init() {
     if(!mTileTexture.loadFromFile("textures/tiles/tile-1.png")) {
         throw runtime_error("Failed to load tile texture. Is it in the correct folder?");
@@ -30,6 +34,7 @@ void World::init() {
             tile.x = x;
             tile.y = y;
 
+            Vector2f pos = gridToIso(x, y);
             tile.hasTree = false;
             tile.growthState = tile.hasTree ? 1.f : 0.f;
             mGrid.push_back(tile);
@@ -43,7 +48,7 @@ void World::init() {
     //populate array 
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
-            float isoX = (x - y) * (TILE_WIDTH / 2.f) + 400.f;
+            float isoX = (x - y) * (TILE_WIDTH / 2.f);
             float isoY = (x + y) * (TILE_HEIGHT / 2.f);
 
             Vector2f ptTop    = {isoX, isoY};
@@ -112,13 +117,13 @@ void World::update(Time dt, bool isFocussing) {
 }
 
 Vector2f World::gridToIso(int x, int y) {
-    float isoX = (x - y) * (TILE_WIDTH / 2.f) + 400.f;
+    float isoX = (x - y) * (TILE_WIDTH / 2.f);
     float isoY = (x + y) * (TILE_HEIGHT / 2.f);
     return Vector2f(isoX, isoY);
 }
 
 Vector2i World::isoToGrid(float x, float y) {
-    float adjX = 400.f - x;
+    float adjX = x;
     float adjY = y;
 
     float halfW = TILE_WIDTH / 2.f;
@@ -126,7 +131,7 @@ Vector2i World::isoToGrid(float x, float y) {
 
     int gridX = static_cast<int>((adjY / halfH + adjX / halfW) / 2.f);
     int gridY = static_cast<int>((adjY/ halfH - adjX / halfW) / 2.f);
-    return Vector2i(gridX, gridY);
+    return Vector2i(gridY, gridX);
 }
 
 void World::toggleTree(int x, int y) {
@@ -185,5 +190,3 @@ void World::draw(RenderTarget& target) {
         }
     }
 }
-
-

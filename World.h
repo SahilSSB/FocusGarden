@@ -18,6 +18,7 @@ class World {
         void update(Time dt, bool isFocussing);
         void draw(RenderTarget& target);
 
+        FloatRect getBounds();
         //math
         Vector2f gridToIso(int x, int y);
         Vector2i isoToGrid(float x, float y);
