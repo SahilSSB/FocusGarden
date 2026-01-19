@@ -6,14 +6,33 @@
 using namespace std;
 using namespace sf;
 
-Game::Game() 
-        : mWindow(VideoMode({800,600}), "Focus Garden"),
+Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mState(GameState::ROAMING),
         mTimerText(mFont),
-        mStatusText(mFont)
+        mStatusText(mFont),
+        mResumeText(mFont),
+        mQuitText(mFont)
 {
     mWindow.setFramerateLimit(60);
-    
+    mIsPaused = false;
+    mMenuBackrgound.setSize(Vector2f({800,600}));
+    mMenuBackrgound.setFillColor(Color(0, 0, 0, 150));
+
+    mResumeText.setString("Resume");
+    mResumeText.setCharacterSize(40);
+    mResumeText.setFillColor(Color::White);
+    mResumeText.setOrigin({mResumeText.getLocalBounds().size.x / 2.f,
+                        mResumeText.getLocalBounds().size.y / 2.f});
+    mResumeText.setPosition({300, 220});
+
+    mQuitText.setFont(mFont);
+    mQuitText.setString("QUIT & SAVE");
+    mQuitText.setCharacterSize(40);
+    mQuitText.setFillColor(Color::White);
+    mQuitText.setOrigin({mQuitText.getLocalBounds().size.x / 2.f, 
+                        mQuitText.getLocalBounds().size.y / 2.f});
+    mQuitText.setPosition({300, 320}); 
+
     try {
         mWorld.init();
 
@@ -92,6 +111,24 @@ void Game::processEvents() {
                                                         static_cast<float>(worldPos.y));
                     mWorld.toggleTree(gridPos.x, gridPos.y);
                 }
+                if (mIsPaused) {
+                    Vector2i mousePos = Mouse::getPosition(mWindow);
+                    Vector2f worldPos = mWindow.mapPixelToCoords(mousePos, mWindow.getDefaultView());
+                    
+                    if (mResumeText.getGlobalBounds().contains(worldPos)) {
+                        mIsPaused = false;
+                    }
+                    else if (mQuitText.getGlobalBounds().contains(worldPos)) {
+                        mWorld.save("garden.dat");
+                        mWindow.close();
+                    }
+                else {
+                    Vector2i mousePos = Mouse::getPosition(mWindow);
+                    Vector2f worldPos = mWindow.mapPixelToCoords(mousePos, mWorldView);
+                    Vector2i gridPos = mWorld.isoToGrid(worldPos.x, worldPos.y);
+                    mWorld.toggleTree(gridPos.x, gridPos.y);
+                    }
+                }
             }
         }
         else if (const auto* mouseMove = event->getIf<Event::MouseMoved>()) {
@@ -120,11 +157,19 @@ void Game::processEvents() {
                     mStatusText.setFillColor(Color::Black);
                 }
             }
+            else if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
+            if (keyPress->scancode == Keyboard::Scancode::Escape) {
+                mIsPaused = !mIsPaused;
+                }
+            }
         }
     }
 }
 
 void Game::update(Time dt) {
+    if (mIsPaused) {
+        return;
+    }
     if (mIsFocussing) {
         mFocusTimer -= dt.asSeconds();
         if (mFocusTimer <= 0.f) {
@@ -148,6 +193,16 @@ void Game::render() {
     mWindow.clear(sf::Color(135, 206, 235));
     mWindow.setView(mWorldView);
     mWorld.draw(mWindow);
+
+    mWindow.setView(mWindow.getDefaultView());
+    mWindow.draw(mTimerText);
+    mWindow.draw(mStatusText);
+
+    if  (mIsPaused) {
+        mWindow.draw(mMenuBackrgound);
+        mWindow.draw(mResumeText);
+        mWindow.draw(mQuitText);
+    }
 
     mWindow.setView(mUIView);
     mWindow.draw(mTimerText);
