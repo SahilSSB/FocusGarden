@@ -1,6 +1,8 @@
 #pragma once 
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <string>
+#include <fstream>
 using namespace std;
 using namespace sf;
 
@@ -19,6 +21,10 @@ class World {
         void draw(RenderTarget& target);
         void setHoveredTile(Vector2i gridPos);
 
+        void save(const string& filename);
+        void load(const string& filename);
+        void finishSession();
+
         FloatRect getBounds();
         //math
         Vector2f gridToIso(int x, int y);
@@ -34,7 +40,7 @@ class World {
         const int MAP_HEIGHT = 20;
         const float TILE_HEIGHT = 16.f;
         const float TILE_WIDTH = 32.f;
-        const float TILE_DEPTH = 20.f;
+        const float TILE_DEPTH = 5.f;
 
         ConvexShape mHoverShape;
         

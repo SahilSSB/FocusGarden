@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <optional>
+#include <iostream>
 #include "World.h"
 using namespace std;
 using namespace sf;
@@ -216,5 +217,37 @@ void World::setHoveredTile(Vector2i gridPos) {
     else {
         mHoverShape.setFillColor(Color::Transparent);
         mHoverShape.setOutlineColor(Color::Transparent);
+    }
+}
+
+void World::save(const string& filename) {
+    ofstream file(filename);
+
+    if (file.is_open()) {
+        for (const auto& tile : mGrid) {
+            if (tile.hasTree) {
+                file << tile.x << " " << tile.y << " " << tile.growthState << "\n";
+            }
+        }
+        cout << "Game Saved to " << filename << endl;
+    }
+}
+
+void World::load(const string& filename) {
+    ifstream file(filename);
+    if (file.is_open()) {
+        int x, y;
+        float growth;
+        while (file >> x >> y >> growth) {
+            if (x >= 0 && x < MAP_WIDTH && y >=0 && y < MAP_HEIGHT) {
+                int index = x + y * MAP_WIDTH;
+                mGrid[index].hasTree = true;
+                mGrid[index].growthState = growth;
+            }
+        }
+        cout << "Game Loaded from " << filename << endl;
+    }
+    else {
+        cout << "No save file found (New Game)." << endl;
     }
 }

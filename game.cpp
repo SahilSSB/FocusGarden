@@ -16,6 +16,9 @@ Game::Game()
     
     try {
         mWorld.init();
+
+        mWorld.load("garden.dat");
+
         if (!mFont.openFromFile("fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf")) {
             cerr << "WARNING: font not found" << endl;
         }
@@ -63,6 +66,7 @@ void Game::run() {
 void Game::processEvents() {
     while (const auto event = mWindow.pollEvent()) {
         if (event->is<Event::Closed>()) {
+            mWorld.save("garden.dat");
             mWindow.close();
         }
         else if (const auto* resized = event->getIf<Event::Resized>()) {
