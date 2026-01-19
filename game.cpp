@@ -131,6 +131,7 @@ void Game::update(Time dt) {
             mFocusTimer = 0.f;
             mIsFocussing = false;
             mStatusText.setString("SESSION COMPLETE!");
+            mWorld.finishSession();
         }
     }
     int minutes = static_cast<int>(mFocusTimer) / 60;

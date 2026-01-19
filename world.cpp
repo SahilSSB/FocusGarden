@@ -114,50 +114,18 @@ void World::init() {
 
 void World::update(Time dt, bool isFocussing) {
     if (!isFocussing) return;
-
+    
     float growthSpeed = 1.f / 10.f;
     for (auto& tile : mGrid) {
         if (tile.hasTree) {
             if (tile.growthState < 1.f) {
                 tile.growthState += growthSpeed * dt.asSeconds();
-
+                
                 if (tile.growthState > 1.f) tile.growthState = 1.f;
             }
         }
     }
 }
-
-Vector2f World::gridToIso(int x, int y) {
-    float isoX = (x - y) * (TILE_WIDTH / 2.f);
-    float isoY = (x + y) * (TILE_HEIGHT / 2.f);
-    return Vector2f(isoX, isoY);
-}
-
-Vector2i World::isoToGrid(float x, float y) {
-    float adjX = x;
-    float adjY = y;
-
-    float halfW = TILE_WIDTH / 2.f;
-    float halfH = TILE_HEIGHT / 2.f;
-
-    int gridX = static_cast<int>((adjY / halfH + adjX / halfW) / 2.f);
-    int gridY = static_cast<int>((adjY/ halfH - adjX / halfW) / 2.f);
-    return Vector2i(gridX, gridY);
-}
-
-void World::toggleTree(int x, int y) {
-    if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
-        int index = x + y * MAP_WIDTH;
-        if (index >=0 && index < mGrid.size()) {
-            mGrid[index].hasTree = !mGrid[index].hasTree;
-        
-        if (mGrid[index].hasTree) {
-            mGrid[index].growthState = 0.f;
-            }
-        }
-    }
-}
-
 
 void World::draw(RenderTarget& target) {
     target.draw(mTerrainMesh, &mTileTexture);
@@ -204,6 +172,31 @@ void World::draw(RenderTarget& target) {
     }
 }
 
+void World::toggleTree(int x, int y) {
+    if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+        int index = x + y * MAP_WIDTH;
+        if (mGrid[index].hasTree && mGrid[index].growthState >= 1.f) {
+            return;
+        }
+        if (x == mActiveSapling.x && y == mActiveSapling.y) {
+            mGrid[index].hasTree = false;
+            mGrid[index].growthState = 0.f;
+            mActiveSapling = {-1, -1};
+        }
+        else if (!mGrid[index].hasTree) {
+            if (mActiveSapling.x != -1) {
+                int oldIndex = mActiveSapling.x + mActiveSapling.y * MAP_WIDTH;
+                mGrid[oldIndex].hasTree = false;
+                mGrid[oldIndex].growthState = 0.f;
+            }
+            mGrid[index].hasTree = true;
+            mGrid[index].growthState = 0.f;
+
+            mActiveSapling = {x, y};
+        }
+    }
+}
+
 void World::setHoveredTile(Vector2i gridPos) {
     if (gridPos.x >= 0 && gridPos.x < MAP_WIDTH &&
         gridPos.y >= 0 && gridPos.y < MAP_HEIGHT) {
@@ -218,6 +211,28 @@ void World::setHoveredTile(Vector2i gridPos) {
         mHoverShape.setFillColor(Color::Transparent);
         mHoverShape.setOutlineColor(Color::Transparent);
     }
+}
+
+Vector2f World::gridToIso(int x, int y) {
+    float isoX = (x - y) * (TILE_WIDTH / 2.f);
+    float isoY = (x + y) * (TILE_HEIGHT / 2.f);
+    return Vector2f(isoX, isoY);
+}
+
+Vector2i World::isoToGrid(float x, float y) {
+    float adjX = x;
+    float adjY = y;
+
+    float halfW = TILE_WIDTH / 2.f;
+    float halfH = TILE_HEIGHT / 2.f;
+
+    int gridX = static_cast<int>((adjY / halfH + adjX / halfW) / 2.f);
+    int gridY = static_cast<int>((adjY/ halfH - adjX / halfW) / 2.f);
+    return Vector2i(gridX, gridY);
+}
+
+void World::finishSession() {
+    mActiveSapling = {-1, -1};
 }
 
 void World::save(const string& filename) {

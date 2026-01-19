@@ -45,6 +45,7 @@ class World {
         ConvexShape mHoverShape;
         
         vector<Tile> mGrid;
+        Vector2i mActiveSapling = {-1, -1};
         VertexArray mTerrainMesh;
 
         //resources
