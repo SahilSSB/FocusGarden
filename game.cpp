@@ -14,6 +14,8 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mQuitText(mFont)
 {
     mWindow.setFramerateLimit(60);
+    ContextSettings settings;
+    settings.antiAliasingLevel = 0;
     mIsPaused = false;
     mMenuBackrgound.setSize(Vector2f({800,600}));
     mMenuBackrgound.setFillColor(Color(0, 0, 0, 150));
@@ -157,10 +159,8 @@ void Game::processEvents() {
                     mStatusText.setFillColor(Color::Black);
                 }
             }
-            else if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
-            if (keyPress->scancode == Keyboard::Scancode::Escape) {
+            else if (keyPress->scancode == Keyboard::Scancode::Escape) {
                 mIsPaused = !mIsPaused;
-                }
             }
         }
     }
@@ -203,10 +203,6 @@ void Game::render() {
         mWindow.draw(mResumeText);
         mWindow.draw(mQuitText);
     }
-
-    mWindow.setView(mUIView);
-    mWindow.draw(mTimerText);
-    mWindow.draw(mStatusText);
 
     mWindow.display();
 }

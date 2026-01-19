@@ -40,7 +40,7 @@ class World {
         const int MAP_HEIGHT = 20;
         const float TILE_HEIGHT = 16.f;
         const float TILE_WIDTH = 32.f;
-        const float TILE_DEPTH = 20.f;
+        const float TILE_DEPTH = 10.f;
 
         ConvexShape mHoverShape;
         

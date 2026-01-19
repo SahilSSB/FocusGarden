@@ -14,7 +14,7 @@ return mTerrainMesh.getBounds();
 }
 
 void World::init() {
-    if(!mTileTexture.loadFromFile("textures/tiles/tile-1.png")) {
+    if(!mTileTexture.loadFromFile("textures/tiles/tile_example.png")) {
         throw runtime_error("Failed to load tile texture. Is it in the correct folder?");
     }
     bool s1 = mTreeSappling.loadFromFile("textures/plants/tree_small.png");
@@ -56,58 +56,67 @@ void World::init() {
     mTerrainMesh.setPrimitiveType(PrimitiveType::Triangles);
     mTerrainMesh.resize(MAP_WIDTH * MAP_HEIGHT * 18);
 
+    Vector2u texSize = mTileTexture.getSize();
+    float tsX = static_cast<float>(texSize.x);
+    float tsY = static_cast<float>(texSize.y);
+
+    float capHeight = tsX / 1.7f;
+
+    //Texture Mapping
+    Vector2f uvTop = {tsX/2, 0};      
+    Vector2f uvBottom = {tsX/2, capHeight}; 
+    Vector2f uvRight = {tsX, capHeight/2};  
+    Vector2f uvLeft = {0, capHeight/2}; 
+
+    Vector2f uvBaseCenter = {tsX / 2.f, tsY};
+    Vector2f uvBaseRight = {tsX, tsY - (capHeight / 2.f)};
+    Vector2f uvBaseLeft = {0.f, tsY - (capHeight / 2.f)};
+
     //populate array 
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
             float isoX = (x - y) * (TILE_WIDTH / 2.f);
             float isoY = (x + y) * (TILE_HEIGHT / 2.f);
 
+            isoX = round(isoX);
+            isoY = round(isoY);
+            
             Vector2f ptTop    = {isoX, isoY};
-            Vector2f ptBottom = {isoX, isoY + TILE_HEIGHT};
+            Vector2f ptBottom = {isoX, isoY + TILE_HEIGHT };
             Vector2f ptRight  = {isoX + TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
             Vector2f ptLeft   = {isoX - TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
             
             Vector2f ptRightDown  = ptRight + Vector2f(0, TILE_DEPTH);
             Vector2f ptBottomDown = ptBottom + Vector2f(0, TILE_DEPTH);
-            Vector2f ptLeftDown   = ptLeft + Vector2f(0, TILE_DEPTH);
-
-            Vector2u texSize = mTileTexture.getSize();
-            float tsX = static_cast<float>(texSize.x);
-            float tsY = static_cast<float>(texSize.y);
-
-            //Texture Mapping
-            Vector2f uvTop = {tsX/2, 0};      
-            Vector2f uvBottom = {tsX/2, tsY}; 
-            Vector2f uvRight = {tsX, tsY/2};  
-            Vector2f uvLeft = {0, tsY/2};   
+            Vector2f ptLeftDown   = ptLeft + Vector2f(0, TILE_DEPTH);  
         
             Vertex* tri = &mTerrainMesh[(x + y * MAP_WIDTH) * 18];
 
-            tri[0].position = ptTop;    tri[0].texCoords = uvTop;
-            tri[1].position = ptRight;  tri[1].texCoords = uvRight;
-            tri[2].position = ptLeft;   tri[2].texCoords = uvLeft;
-            tri[3].position = ptBottom; tri[3].texCoords = uvBottom;
-            tri[4].position = ptLeft;   tri[4].texCoords = uvLeft;
-            tri[5].position = ptRight;  tri[5].texCoords = uvRight;
-            
-            tri[6].position = ptRight;       tri[6].texCoords = uvRight;
-            tri[7].position = ptRightDown;   tri[7].texCoords = uvRight;
-            tri[8].position = ptBottom;      tri[8].texCoords = uvBottom;
-            tri[9].position  = ptBottom;     tri[9].texCoords = uvBottom;
-            tri[10].position = ptRightDown;  tri[10].texCoords = uvRight;
-            tri[11].position = ptBottomDown; tri[11].texCoords = uvBottom;
-            
-            tri[12].position = ptLeft;       tri[12].texCoords = uvLeft;
-            tri[13].position = ptBottom;     tri[13].texCoords = uvBottom;
-            tri[14].position = ptLeftDown;   tri[14].texCoords = uvLeft;
-            tri[15].position = ptBottom;     tri[15].texCoords = uvBottom;
-            tri[16].position = ptBottomDown; tri[16].texCoords = uvBottom;
-            tri[17].position = ptLeftDown;   tri[17].texCoords = uvLeft;
-            
-            Color shadowColor(180, 180, 180);
-            for(int i=6; i<12; i++) tri[i].color = shadowColor;
-            Color darkShadowColor(130, 130, 130);
-            for(int i=12; i<18; i++) tri[i].color = darkShadowColor;
+            tri[0] = {ptTop,    Color::White, uvTop};
+            tri[1] = {ptRight,  Color::White, uvRight};
+            tri[2] = {ptLeft,   Color::White, uvLeft};
+
+            tri[3] = {ptBottom, Color::White, uvBottom};
+            tri[4] = {ptLeft,   Color::White, uvLeft};
+            tri[5] = {ptRight,  Color::White, uvRight};
+
+            Color rightShade(180, 180, 180);
+            tri[6]  = {ptRight,       rightShade, uvRight};
+            tri[7]  = {ptRightDown,   rightShade, uvBaseRight};
+            tri[8]  = {ptBottom,      rightShade, uvBottom};
+
+            tri[9]  = {ptBottom,      rightShade, uvBottom};
+            tri[10] = {ptRightDown,   rightShade, uvBaseRight};
+            tri[11] = {ptBottomDown,  rightShade, uvBaseCenter};
+
+            Color leftShade(130, 130, 130);
+            tri[12] = {ptLeft,        leftShade, uvLeft};
+            tri[13] = {ptBottom,      leftShade, uvBottom};
+            tri[14] = {ptLeftDown,    leftShade, uvBaseLeft};
+
+            tri[15] = {ptBottom,      leftShade, uvBottom};
+            tri[16] = {ptBottomDown,  leftShade, uvBaseCenter};
+            tri[17] = {ptLeftDown,    leftShade, uvBaseLeft};
         }
     }
 }
