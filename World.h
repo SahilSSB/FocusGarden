@@ -9,7 +9,7 @@ using namespace sf;
 struct Tile {
     int x, y;
     bool hasTree;
-
+    bool hasHouse = false;
     float growthState = 0.0f;
 };
 
@@ -41,17 +41,23 @@ class World {
         const float TILE_HEIGHT = 16.f;
         const float TILE_WIDTH = 32.f;
         const float TILE_DEPTH = 10.f;
-
+        const int HOUSE_X = 4;
+        const int HOUSE_Y = 0;
+        const int HOUSE_H = 6;
+        const int HOUSE_W = 8;
         ConvexShape mHoverShape;
         
         vector<Tile> mGrid;
         Vector2i mActiveSapling = {-1, -1};
         VertexArray mTerrainMesh;
+        Vector2i mHouseAnchor;
 
         //resources
         Texture mTileTexture;
         Texture mTreeSappling;
         Texture mTreeMedium;
         Texture mTreeMature;
+        Texture mHouseTexture;
+        Sprite mHouseSprite;
 
 };

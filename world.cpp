@@ -5,8 +5,7 @@
 using namespace std;
 using namespace sf;
 
-World::World() {
-
+World::World() : mHouseSprite(mHouseTexture) {
 }
 
 FloatRect World::getBounds() {
@@ -28,6 +27,12 @@ void World::init() {
                 throw runtime_error("Failed to load of the tree textures (small/medium/lage). Is it in the correct folder?");
             }
     }
+
+    if (!mHouseTexture.loadFromFile("textures/house /house.png")) {
+        throw runtime_error("Failed to load house texture. Is it in the correct folder?");
+    }
+    mHouseSprite.setTexture(mHouseTexture);
+
     mHoverShape.setPointCount(4);
     mHoverShape.setPoint(0, {0.f, 0.f});
     mHoverShape.setPoint(1, {TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
@@ -38,6 +43,16 @@ void World::init() {
     mHoverShape.setOutlineColor(Color(48, 48, 48,100));
     mHoverShape.setOutlineThickness(1.f);
 
+    Vector2u hSize = mHouseTexture.getSize();
+    cout<< "House texture loaded: " << hSize.x << "x" << hSize.y << endl;
+    mHouseSprite.setOrigin({hSize.x / 2.f, static_cast<float>(hSize.y)});
+    float desiredWidth = TILE_WIDTH * 8.f;
+    float scaledValue = desiredWidth / static_cast<float>(hSize.x);
+    mHouseSprite.setScale({scaledValue, scaledValue});
+    cout << "House Scale: " << scaledValue << endl;
+
+    mHouseAnchor = {HOUSE_X, HOUSE_Y};
+
     mGrid.clear();
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
@@ -46,6 +61,15 @@ void World::init() {
             tile.y = y;
 
             Vector2f pos = gridToIso(x, y);
+
+            if (x >= HOUSE_X && x < HOUSE_X + HOUSE_W &&
+                 y >= HOUSE_Y && y < HOUSE_Y + HOUSE_H) {
+                    tile.hasHouse = true;
+            }
+            else {
+                tile.hasHouse = false;
+            }
+
             tile.hasTree = false;
             tile.growthState = tile.hasTree ? 1.f : 0.f;
             mGrid.push_back(tile);
@@ -78,9 +102,6 @@ void World::init() {
             float isoX = (x - y) * (TILE_WIDTH / 2.f);
             float isoY = (x + y) * (TILE_HEIGHT / 2.f);
 
-            isoX = round(isoX);
-            isoY = round(isoY);
-            
             Vector2f ptTop    = {isoX, isoY};
             Vector2f ptBottom = {isoX, isoY + TILE_HEIGHT };
             Vector2f ptRight  = {isoX + TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
@@ -141,6 +162,9 @@ void World::draw(RenderTarget& target) {
 
     target.draw(mHoverShape);
 
+    int triggerX = HOUSE_X + (HOUSE_W / 2.f);
+    int triggerY = HOUSE_Y + (HOUSE_H / 2.f);
+ 
     for (const auto& tile : mGrid) {
         if (tile.hasTree) {
             Texture* currentTexture;
@@ -178,12 +202,35 @@ void World::draw(RenderTarget& target) {
             tree.setPosition({pos.x, pos.y + verticaloffset + offset});
             target.draw(tree);
         }
+    Sprite houseSprite(mHouseTexture);
+    if (tile.x == triggerX && tile.y == triggerY) {
+        float centerGridX = HOUSE_X + (HOUSE_W / 2.f);
+        float centerGridY = HOUSE_Y + (HOUSE_H / 2.f);
+
+        Vector2f housePos = gridToIso(static_cast<int>(centerGridX), 
+                                    static_cast<int>(centerGridY));
+        Vector2u hSize = mHouseTexture.getSize();
+
+        houseSprite.setOrigin({hSize.x / 2.f, static_cast<float>(hSize.y)});
+        houseSprite.setPosition(housePos);
+
+        float scaleValue = (TILE_WIDTH * 6.f) / static_cast<float>(hSize.x);
+        houseSprite.setScale({scaleValue, scaleValue});
+        houseSprite.move({10.f, 50.f});
+
+        target.draw(houseSprite);
+    
+        }
     }
 }
 
 void World::toggleTree(int x, int y) {
     if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
         int index = x + y * MAP_WIDTH;
+        if (mGrid[index].hasHouse) {
+            cout << "Blocked\n";
+                return;
+            }
         if (mGrid[index].hasTree && mGrid[index].growthState >= 1.f) {
             return;
         }
