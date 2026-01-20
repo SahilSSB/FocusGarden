@@ -1,13 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include "World.h"
+#include "GameState.h"
 using namespace std;
-
-enum GameState {
-    ROAMING, 
-    MENU,
-    FOCUSSING
-};
 
 class Game {
     public:

@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include "Player.h"
 using namespace std;
 using namespace sf;
 
@@ -34,6 +35,8 @@ class World {
         void plantTree(int x, int y);
         void burnTree(int x, int y);
         void toggleTree(int x, int y);
+
+        bool isPositionBlocked(Vector2f worldPos);
     
     private:
         const int MAP_WIDTH = 20;
@@ -51,6 +54,8 @@ class World {
         Vector2i mActiveSapling = {-1, -1};
         VertexArray mTerrainMesh;
         Vector2i mHouseAnchor;
+
+        Player mPlayer;
 
         //resources
         Texture mTileTexture;

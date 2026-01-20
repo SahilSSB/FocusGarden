@@ -1,9 +1,20 @@
 #include <SFML/Graphics.hpp>
 #include <optional>
 #include <iostream>
+#include <algorithm>
+#include <functional>
 #include "World.h"
+#include "Player.h"
 using namespace std;
 using namespace sf;
+
+struct RenderItem {
+    float y;
+    function<void(RenderTarget&)> drawCall;
+    bool operator<(const RenderItem& other) const {
+        return y < other.y;
+    }
+};
 
 World::World() : mHouseSprite(mHouseTexture) {
 }
@@ -13,7 +24,7 @@ return mTerrainMesh.getBounds();
 }
 
 void World::init() {
-    if(!mTileTexture.loadFromFile("textures/tiles/tile_example.png")) {
+    if(!mTileTexture.loadFromFile("textures/tiles/Grass_tile.png")) {
         throw runtime_error("Failed to load tile texture. Is it in the correct folder?");
     }
     bool s1 = mTreeSappling.loadFromFile("textures/plants/tree_small.png");
@@ -27,6 +38,13 @@ void World::init() {
                 throw runtime_error("Failed to load of the tree textures (small/medium/lage). Is it in the correct folder?");
             }
     }
+    
+   mPlayer.init("textures/Small-8-Direction-Characters_by_AxulArt.png");
+   Vector2f spawnPos = gridToIso(10, 10);
+   mPlayer.setPosition(spawnPos);
+   mPlayer.setCollissionCallback([this](Vector2f pos) {
+        return this->isPositionBlocked(pos);
+   });
 
     if (!mHouseTexture.loadFromFile("textures/house /house.png")) {
         throw runtime_error("Failed to load house texture. Is it in the correct folder?");
@@ -143,7 +161,9 @@ void World::init() {
 }
 
 void World::update(Time dt, bool isFocussing) {
-    if (!isFocussing) return;
+    GameState currentState = isFocussing ? GameState::FOCUSSING : GameState ::ROAMING;
+    mPlayer.update(dt, currentState);
+    if(!isFocussing) return;
     
     float growthSpeed = 1.f / 10.f;
     for (auto& tile : mGrid) {
@@ -161,6 +181,8 @@ void World::draw(RenderTarget& target) {
     target.draw(mTerrainMesh, &mTileTexture);
 
     target.draw(mHoverShape);
+
+    vector<RenderItem> renderQueue;
 
     int triggerX = HOUSE_X + (HOUSE_W / 2.f);
     int triggerY = HOUSE_Y + (HOUSE_H / 2.f);
@@ -200,7 +222,11 @@ void World::draw(RenderTarget& target) {
             float scaleFactor = treeHeight / bounds.size.y;
             tree.setScale({scaleFactor, scaleFactor}); 
             tree.setPosition({pos.x, pos.y + verticaloffset + offset});
-            target.draw(tree);
+
+            renderQueue.push_back({
+                tree.getPosition().y,
+                [tree](RenderTarget& t) mutable { t.draw(tree); }
+            });
         }
     Sprite houseSprite(mHouseTexture);
     if (tile.x == triggerX && tile.y == triggerY) {
@@ -218,9 +244,21 @@ void World::draw(RenderTarget& target) {
         houseSprite.setScale({scaleValue, scaleValue});
         houseSprite.move({10.f, 50.f});
 
-        target.draw(houseSprite);
-    
+        renderQueue.push_back({
+            houseSprite.getPosition().y,
+            [houseSprite](RenderTarget& t) mutable { t.draw(houseSprite);}
+            });
         }
+    }
+    renderQueue.push_back({
+        mPlayer.getPosition().y,
+        [&](RenderTarget & t) {mPlayer.draw(t); }
+    });
+
+    sort(renderQueue.begin(), renderQueue.end());
+
+    for(const auto& item : renderQueue) {
+        item.drawCall(target);
     }
 }
 
@@ -282,8 +320,8 @@ Vector2i World::isoToGrid(float x, float y) {
     float halfW = TILE_WIDTH / 2.f;
     float halfH = TILE_HEIGHT / 2.f;
 
-    int gridX = static_cast<int>((adjY / halfH + adjX / halfW) / 2.f);
-    int gridY = static_cast<int>((adjY/ halfH - adjX / halfW) / 2.f);
+    int gridX = static_cast<int>(floor((adjY / halfH + adjX / halfW) / 2.f));
+    int gridY = static_cast<int>(floor((adjY/ halfH - adjX / halfW) / 2.f));
     return Vector2i(gridX, gridY);
 }
 
@@ -321,4 +359,61 @@ void World::load(const string& filename) {
     else {
         cout << "No save file found (New Game)." << endl;
     }
+}
+
+bool World::isPositionBlocked(Vector2f worldPos) {
+    Vector2i gridPos = isoToGrid(worldPos.x, worldPos.y);
+
+    float halfW = TILE_WIDTH / 2.f;
+    float halfH = TILE_HEIGHT / 2.f;
+
+    float visualOffsetY = 5.f;
+
+    float adjustedY = worldPos.y - visualOffsetY;
+
+    float gridFloatX = (adjustedY / halfH + worldPos.x / halfW) / 2.f;
+    float gridFloatY = (adjustedY / halfH - worldPos.x / halfW) / 2.f;
+    float topEdgeBuffer = 0.9f;
+
+    if (gridFloatX < topEdgeBuffer || 
+        gridFloatX >= static_cast<float>(MAP_WIDTH) ||
+        gridFloatY < topEdgeBuffer || 
+        gridFloatY >= static_cast<float>(MAP_HEIGHT)) {
+            return true;
+    }
+
+    float playerSizeBuffer = 0.35f;
+    auto checkTile = [&](int x, int y) -> bool {
+        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return true;
+        int idx = x + y * MAP_WIDTH;
+        if (mGrid[idx].hasHouse) return true;
+        if (mGrid[idx].hasTree && mGrid[idx].growthState >= 1.f) return true;
+        return false;
+    };
+
+    int currentX = static_cast<int>(floor(gridFloatX));
+    int currentY = static_cast<int>(floor(gridFloatY));
+    
+    if (checkTile(currentX, currentY)) return true;
+
+    float fractX = gridFloatX - currentX;
+    float fractY = gridFloatY - currentY;
+
+    bool nearRight = fractX > (1.f - playerSizeBuffer);
+    bool nearLeft  = fractX < playerSizeBuffer;
+    bool nearDown  = fractY > (1.f - playerSizeBuffer);
+    bool nearUp    = fractY < playerSizeBuffer;
+
+    if (nearRight && checkTile(currentX + 1, currentY)) return true;
+    if (nearLeft  && checkTile(currentX - 1, currentY)) return true;
+    if (nearDown  && checkTile(currentX, currentY + 1)) return true;
+    if (nearUp    && checkTile(currentX, currentY - 1)) return true;
+
+    if (nearRight && nearDown && checkTile(currentX + 1, currentY + 1)) return true;
+    if (nearRight && nearUp   && checkTile(currentX + 1, currentY - 1)) return true;
+    if (nearLeft  && nearDown && checkTile(currentX - 1, currentY + 1)) return true;
+    if (nearLeft  && nearUp   && checkTile(currentX - 1, currentY - 1)) return true;
+    
+    return false;
+
 }
