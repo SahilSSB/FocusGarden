@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Game.h"
 #include "Player.h"
+#include "World.h"
 using namespace std;
 using namespace sf;
 

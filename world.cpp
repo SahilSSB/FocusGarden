@@ -46,6 +46,14 @@ void World::init() {
         return this->isPositionBlocked(pos);
    });
 
+   if (!mFenceTexture.loadFromFile("textures/house /fence1.png")) {
+       throw runtime_error("Failed to load fens texture. Is it in the correct folder?");
+    }
+
+   if (!mFenceTexture1.loadFromFile("textures/house /fence2.png")) {
+       throw runtime_error("Failed to load fens texture. Is it in the correct folder?");
+    }
+
     if (!mHouseTexture.loadFromFile("textures/house /house.png")) {
         throw runtime_error("Failed to load house texture. Is it in the correct folder?");
     }
@@ -87,8 +95,32 @@ void World::init() {
             else {
                 tile.hasHouse = false;
             }
+            if (x == 13 && ( y !=0 && y <=6)) {
+                tile.hasFence = true;
+                tile.fenceVariant = 0;
+            }
+            else if (x == 5 && ( y !=0 && y <=6)) {
+                tile.hasFence = true;
+                tile.fenceVariant = 0;
+            }
+            else if ((x >= 6 && x <= 7) && ( y == 7)) {
+                tile.hasFence = true;
+                tile.fenceVariant = 1;
+            }
+            else if ((x >= 10 && x <=12) && (y == 7)) {
+                tile.hasFence = true;
+                tile.fenceVariant = 1;
+            }
+            else if ((x >= 10 && x <= 12) && (y == 0)) {
+                tile.hasFence = true;
+                tile.fenceVariant = 1;
+            }
 
             tile.hasTree = false;
+            if ((x == 11 && y == 5 )) {
+                tile.hasTree = true;
+                tile.growthState = 1.f;
+            }
             tile.growthState = tile.hasTree ? 1.f : 0.f;
             mGrid.push_back(tile);
         }
@@ -158,11 +190,13 @@ void World::init() {
             tri[17] = {ptLeftDown,    leftShade, uvBaseLeft};
         }
     }
+    initEnvironment();
 }
 
 void World::update(Time dt, bool isFocussing) {
     GameState currentState = isFocussing ? GameState::FOCUSSING : GameState ::ROAMING;
     mPlayer.update(dt, currentState);
+    updateEnvironment(dt);
     if (!isFocussing) {
         Vector2i facingTile = getFacingTile();
         setHoveredTile(facingTile);
@@ -218,19 +252,14 @@ void World::interact() {
 }
 
 void World::draw(RenderTarget& target) {
-    target.draw(mTerrainMesh, &mTileTexture);
-
-    ConvexShape debugDoor = mHoverShape; // Copy your existing hover shape
-    debugDoor.setFillColor(Color(255, 0, 0, 150)); // Bright Red (Semi-transparent)
-    debugDoor.setOutlineColor(Color::Red);
-    debugDoor.setOutlineThickness(2.f);
-    
-    // Position it at the door coordinates
-    vector<Vector2i> debugCoords = {{8,5}, {9,5}};
-    for (const auto& coord : debugCoords) {
-        debugDoor.setPosition(gridToIso(coord.x, coord.y));
-        target.draw(debugDoor);
+    /*for (const auto& bird : mBirds) {
+        target.draw(bird.sprite);
     }
+    for (const auto& cloud : mClouds) {
+        target.draw(cloud.sprite);
+    }*/
+
+    target.draw(mTerrainMesh, &mTileTexture);
 
     target.draw(mHoverShape);
 
@@ -238,7 +267,7 @@ void World::draw(RenderTarget& target) {
 
     int triggerX = HOUSE_X + (HOUSE_W / 2.f);
     int triggerY = HOUSE_Y + (HOUSE_H / 2.f);
- 
+    
     for (const auto& tile : mGrid) {
         if (tile.hasTree) {
             Texture* currentTexture;
@@ -280,6 +309,33 @@ void World::draw(RenderTarget& target) {
                 [tree](RenderTarget& t) mutable { t.draw(tree); }
             });
         }
+    if (tile.hasFence) {
+
+        Texture* Tex;
+        if (tile.fenceVariant == 0) {
+            Tex = &mFenceTexture;
+        }
+        else {
+            Tex = &mFenceTexture1;
+        }
+
+        Sprite fence(*Tex);
+        Vector2f pos = gridToIso(tile.x, tile.y);
+        Vector2u fSize = mFenceTexture.getSize();
+
+        fence.setOrigin({fSize.x / 2.f, static_cast<float>(fSize.y)});
+        float targetWidth = TILE_WIDTH * 1.2f;
+        float scaleFactor = targetWidth / static_cast<float>(fSize.x);
+
+        fence.setScale({scaleFactor, scaleFactor});
+        fence .setPosition({pos.x, pos.y + (TILE_HEIGHT / 2.f) + 8.f});
+
+        renderQueue.push_back({
+            fence.getPosition().y,
+            [fence](RenderTarget& t) mutable { t.draw(fence); }
+        });
+    }
+
     Sprite houseSprite(mHouseTexture);
     if (tile.x == triggerX && tile.y == triggerY) {
         float centerGridX = HOUSE_X + (HOUSE_W / 2.f);
@@ -440,7 +496,8 @@ bool World::isPositionBlocked(Vector2f worldPos) {
         if ((x == 8 || x == 9) && (y == 7)) return false;
         int idx = x + y * MAP_WIDTH;
         if (mGrid[idx].hasHouse) return true;
-        if (mGrid[idx].hasTree && mGrid[idx].growthState >= 1.f) return true;
+        if (mGrid[idx].hasFence) return true;
+        if (mGrid[idx].hasTree && mGrid[idx].growthState >= 0.66f) return true;
         return false;
     };
 
@@ -487,4 +544,68 @@ bool World::checkDoorEntry(Vector2f playerPos) {
         return true;
     }
     return false;
+}
+
+void World::initEnvironment() {
+    if(!mCloudTexture.loadFromFile("textures/cloud.png")) {
+        throw runtime_error("Wanring: cloud textures not found");
+    }
+    if (!mBirdTexture.loadFromFile("textures/cloud.png")) {
+        throw runtime_error("Warning: bird textures not found");
+    }
+    for (int i = 0; i < 5; ++i) {
+        Cloud c(mCloudTexture);
+
+        float x = static_cast<float>(rand() % 1200 - 800);
+        float y = static_cast<float>(rand() % 800 - 400);
+        c.sprite.setPosition({x, y});
+
+        float scale = (rand() % 10) / 10.f;
+        c.sprite.setScale({scale, scale});
+
+        c.sprite.setColor(sf::Color(255, 255, 255));
+
+        c.speed = scale * 50.f + 5.f;
+
+        mClouds.push_back(c);
+    }
+    for (int i = 0; i < 3; ++i) {
+        Bird b(mBirdTexture);
+
+        float x = static_cast<float>(rand() % 800);
+        float y = static_cast<float>(rand() % 400);
+
+        b.sprite.setPosition({x, y});
+        b.sprite.setScale({0.5f, 0.5f});
+
+        float velX = 30.f + (rand() % 20);
+        float velY = 5.f - (rand() % 10);
+        b.velocity = {velX, velY};
+
+        mBirds.push_back(b);
+    }
+}
+
+void World::updateEnvironment(Time dt) {
+    float mapWidth = 1000.f;
+
+    for (auto& cloud : mClouds) {
+        cloud.sprite.move({cloud.speed * dt.asSeconds(), 0.f});
+
+        if (cloud.sprite.getPosition().x > mapWidth) {
+            float newY = static_cast<float>(rand() % 60);
+            cloud.sprite.setPosition({-200.f, newY});
+        }
+    }
+
+    for (auto& bird : mBirds) {
+        bird.sprite.move(bird.velocity * dt.asSeconds());
+
+        if (bird.sprite.getPosition().x > mapWidth) {
+            float newY = static_cast<float>(rand() % 500);
+            bird.sprite.setPosition({-50.f, newY});
+            float driftY = 5.f - (rand() % 10);
+            bird.velocity.y = driftY;
+        }
+    }
 }
