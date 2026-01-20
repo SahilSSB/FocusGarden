@@ -47,6 +47,6 @@ class Player {
 
         //helpers
         void updateAnimation(sf::Time dt);
-        void handleInput();
+        void handleInput(GameState state);
 
 };

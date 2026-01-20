@@ -3,5 +3,6 @@
 enum class GameState {
     ROAMING,
     FOCUSSING,
-    MENU
+    MENU,
+    INSIDE_HOUSE
 };

@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include "Game.h"
+#include "Player.h"
 using namespace std;
 using namespace sf;
 
@@ -192,13 +193,31 @@ void Game::update(Time dt) {
     mTimerText.setString(timeStr);
     
     mWorld.update(dt, mIsFocussing);
+
+    if (mState == GameState::ROAMING) {
+        if (mWorld.checkDoorEntry(mWorld.getPlayerPosition())) {
+            mState = GameState::INSIDE_HOUSE;
+
+            mWorld.setPlayerPosition({400.f, 300.f});
+            mWorld.disablePlayerCollision();
+
+            mWorldView.setCenter({400.f, 300.f});
+            mWorldView.setSize({800.f, 600.f});
+        }
+    } ;
 }
 
 void Game::render() {
     mWindow.clear(sf::Color(135, 206, 235));
     mWindow.setView(mWorldView);
-    mWorld.draw(mWindow);
 
+    if (mState == GameState::ROAMING) {
+        mWorld.draw(mWindow);
+    }
+    else if (mState == GameState::INSIDE_HOUSE) {
+        mWindow.clear(sf::Color::Black);
+        mWorld.drawPlayer(mWindow);
+    }
     mWindow.setView(mWindow.getDefaultView());
     mWindow.draw(mTimerText);
     mWindow.draw(mStatusText);

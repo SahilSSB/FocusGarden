@@ -21,7 +21,7 @@ void Player::init(const string& texturePath) {
 
 void Player::update(Time dt, GameState currentState) {
     if (currentState != GameState::ROAMING || (mVelocity.x == 0 && mVelocity.y == 0)) {
-        if (currentState == GameState::ROAMING) handleInput();
+        if (currentState == GameState::ROAMING) handleInput(currentState);
         if (mVelocity.x == 0 && mVelocity.y == 0) {
             mCurrentFrame = 0;
             int sheetColumn = 0;
@@ -41,7 +41,7 @@ void Player::update(Time dt, GameState currentState) {
         return;
     }
 }
-    handleInput();
+    handleInput(currentState);
     Vector2f newPos = mSprite.getPosition() + mVelocity * dt.asSeconds();
     
     if (mCollisionCheck && !mCollisionCheck(newPos)) {
@@ -70,7 +70,7 @@ void Player::update(Time dt, GameState currentState) {
     }
 }
 
-void Player::handleInput() {
+void Player::handleInput(GameState state) {
     mVelocity = {0.f, 0.f};
 
     float inputX = 0.f;
@@ -81,7 +81,10 @@ void Player::handleInput() {
     if (Keyboard::isKeyPressed(Keyboard::Key::A)) inputX -= 1.f;
     if (Keyboard::isKeyPressed(Keyboard::Key::D)) inputX += 1.f;
 
-    if (inputX != 0 || inputY != 0) {
+    if (state == GameState::INSIDE_HOUSE) {
+        mVelocity = {inputX, inputY};
+    }
+    else{
         mVelocity.x = (inputX - inputY);
         mVelocity.y = (inputX + inputY) * 0.5f;
     }

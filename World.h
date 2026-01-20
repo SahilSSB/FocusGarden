@@ -40,7 +40,14 @@ class World {
         Vector2i getFacingTile();
 
         bool isPositionBlocked(Vector2f worldPos);
-    
+        bool checkDoorEntry(Vector2f playerPos);
+        
+        Vector2f getPlayerPosition() const { return mPlayer.getPosition(); }
+        void setPlayerPosition(sf::Vector2f pos) { mPlayer.setPosition(pos); }
+        void drawPlayer(sf::RenderTarget& target) { mPlayer.draw(target); }
+        
+        void disablePlayerCollision() { mPlayer.setCollissionCallback(nullptr); }
+        
     private:
         const int MAP_WIDTH = 20;
         const int MAP_HEIGHT = 20;

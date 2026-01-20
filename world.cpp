@@ -166,6 +166,7 @@ void World::update(Time dt, bool isFocussing) {
     if (!isFocussing) {
         Vector2i facingTile = getFacingTile();
         setHoveredTile(facingTile);
+        return;
     } 
     float growthSpeed = 1.f / 10.f;
     for (auto& tile : mGrid) {
@@ -218,6 +219,18 @@ void World::interact() {
 
 void World::draw(RenderTarget& target) {
     target.draw(mTerrainMesh, &mTileTexture);
+
+    ConvexShape debugDoor = mHoverShape; // Copy your existing hover shape
+    debugDoor.setFillColor(Color(255, 0, 0, 150)); // Bright Red (Semi-transparent)
+    debugDoor.setOutlineColor(Color::Red);
+    debugDoor.setOutlineThickness(2.f);
+    
+    // Position it at the door coordinates
+    vector<Vector2i> debugCoords = {{8,5}, {9,5}};
+    for (const auto& coord : debugCoords) {
+        debugDoor.setPosition(gridToIso(coord.x, coord.y));
+        target.draw(debugDoor);
+    }
 
     target.draw(mHoverShape);
 
@@ -421,9 +434,10 @@ bool World::isPositionBlocked(Vector2f worldPos) {
             return true;
     }
 
-    float playerSizeBuffer = 0.35f;
+    float playerSizeBuffer = 0.3f;
     auto checkTile = [&](int x, int y) -> bool {
         if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return true;
+        if ((x == 8 || x == 9) && (y == 7)) return false;
         int idx = x + y * MAP_WIDTH;
         if (mGrid[idx].hasHouse) return true;
         if (mGrid[idx].hasTree && mGrid[idx].growthState >= 1.f) return true;
@@ -455,4 +469,22 @@ bool World::isPositionBlocked(Vector2f worldPos) {
     
     return false;
 
+}
+
+bool World::checkDoorEntry(Vector2f playerPos) {
+    Vector2i gridPos = isoToGrid(playerPos.x, playerPos.y);
+
+    float halfW = TILE_WIDTH / 2.f;
+    float halfH = TILE_HEIGHT / 2.f;
+
+    float gridFloatX = (playerPos.y / halfH + playerPos.x / halfW) / 2.f;
+    float gridFloatY = (playerPos.y / halfH - playerPos.x / halfW) / 2.f;
+
+    int gridX = static_cast<int>(gridFloatX);
+    int gridY = static_cast<int>(gridFloatY);
+
+    if ((gridX == 8 || gridX == 9) && gridY == 7) {
+        return true;
+    }
+    return false;
 }
