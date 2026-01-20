@@ -35,6 +35,9 @@ class World {
         void plantTree(int x, int y);
         void burnTree(int x, int y);
         void toggleTree(int x, int y);
+        
+        void interact();
+        Vector2i getFacingTile();
 
         bool isPositionBlocked(Vector2f worldPos);
     

@@ -163,8 +163,10 @@ void World::init() {
 void World::update(Time dt, bool isFocussing) {
     GameState currentState = isFocussing ? GameState::FOCUSSING : GameState ::ROAMING;
     mPlayer.update(dt, currentState);
-    if(!isFocussing) return;
-    
+    if (!isFocussing) {
+        Vector2i facingTile = getFacingTile();
+        setHoveredTile(facingTile);
+    } 
     float growthSpeed = 1.f / 10.f;
     for (auto& tile : mGrid) {
         if (tile.hasTree) {
@@ -175,6 +177,43 @@ void World::update(Time dt, bool isFocussing) {
             }
         }
     }
+}
+
+Vector2i World::getFacingTile() {
+    Vector2f pPos = mPlayer.getPosition();
+    int dir = mPlayer.getDirection();
+
+    float adjustedY = pPos.y - (11.f * 1.8f);
+    
+    float halfW = TILE_WIDTH / 2.f;
+    float halfH = TILE_HEIGHT / 2.f;
+    
+    // Round instead of truncate to get nearest tile
+    int playerGridX = static_cast<int>(round((adjustedY / halfH + pPos.x / halfW) / 2.f));
+    int playerGridY = static_cast<int>(round((adjustedY / halfH - pPos.x / halfW) / 2.f));
+
+    int dx = 0;
+    int dy = 0;
+
+    switch(dir) {
+        case 0: dx =  1; dy = -1; break; //NE
+        case 1: dx =  1; dy =  0; break; //E
+        case 2: dx =  1; dy =  1; break; //SE
+        case 3: dx =  0; dy =  1; break; //S
+        case 4: dx = -1; dy =  1; break; //SW
+        case 5: dx = -1; dy =  0; break; //W
+        case 6: dx = -1; dy = -1; break; //NW
+        case 7: dx =  0; dy = -1; break; //N
+        default: break;
+    }
+    Vector2i facingTile = Vector2i(playerGridX + dx, playerGridY + dy);
+    
+    return facingTile;
+}
+
+void World::interact() {
+    Vector2i target = getFacingTile();
+    toggleTree(target.x, target.y);
 }
 
 void World::draw(RenderTarget& target) {

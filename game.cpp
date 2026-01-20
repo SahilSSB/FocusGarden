@@ -159,6 +159,11 @@ void Game::processEvents() {
                     mStatusText.setFillColor(Color::Black);
                 }
             }
+            else if (keyPress->scancode == Keyboard::Scancode::Enter) {
+                if (!mIsFocussing && !mIsPaused) {
+                    mWorld.interact();
+                }
+            }
             else if (keyPress->scancode == Keyboard::Scancode::Escape) {
                 mIsPaused = !mIsPaused;
             }

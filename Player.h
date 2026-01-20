@@ -11,6 +11,7 @@ class Player {
         void init(const string& texturePath);
         void update(sf::Time dt, GameState currentState);
         void draw(sf::RenderTarget& target);
+        int getDirection() const { return mDirectionIndex; }
 
         sf::Vector2f getPosition() const { return mSprite.getPosition(); }
         void setPosition(sf::Vector2f pos) { mSprite.setPosition(pos); }
