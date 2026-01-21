@@ -37,7 +37,7 @@ class World {
 
         FloatRect getBounds();
         //math
-        Vector2f gridToIso(int x, int y);
+        Vector2f gridToIso(float x, float y);
         Vector2i isoToGrid(float x, float y);
 
         //mechanics
@@ -88,6 +88,7 @@ class World {
         void addBlock(VertexArray& mesh, int x, int y, const Vector2f& uvTop,
                     const Vector2f& uvSide, bool leftWall, bool rightWall);
         void addWaterBlock(int x, int y);
+        void addRock(int x, int y, int variant);
 
         Player mPlayer;
         Interior mInterior;
@@ -103,7 +104,11 @@ class World {
         Texture mBirdTexture;
         Texture mFenceTexture;
         Texture mFenceTexture1;
-        Texture mRockTexture;
+        Texture mRockTexture1;
+        Texture mRockTexture2;
+        Texture mRockTexture3;
+        Texture mRockTexture4;
+        Texture mRockTexture5;
         Texture mWaterTexture;
 
 };

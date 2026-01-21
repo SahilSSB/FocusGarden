@@ -46,7 +46,19 @@ void World::init() {
         return this->isPositionBlocked(pos);
    });
 
-   if (!mRockTexture.loadFromFile("textures/rock.png")) {
+   if (!mRockTexture1.loadFromFile("textures/rocks/rock.png")) {
+        throw runtime_error("Failed to load rock texture. Is it in the correct folder?");
+   }
+   if (!mRockTexture2.loadFromFile("textures/rocks/boulder_1.png")) {
+        throw runtime_error("Failed to load rock texture. Is it in the correct folder?");
+   }
+   if (!mRockTexture3.loadFromFile("textures/rocks/Cluster_1.png")) {
+        throw runtime_error("Failed to load rock texture. Is it in the correct folder?");
+   }
+   if (!mRockTexture4.loadFromFile("textures/rocks/rock_large_1.png")) {
+        throw runtime_error("Failed to load rock texture. Is it in the correct folder?");
+   }
+   if (!mRockTexture5.loadFromFile("textures/rocks/rock_large_2.png")) {
         throw runtime_error("Failed to load rock texture. Is it in the correct folder?");
    }
 
@@ -93,6 +105,7 @@ void World::init() {
             Tile tile;
             tile.x = x;
             tile.y = y;
+            tile.isSolid = false;
 
             Vector2f pos = gridToIso(x, y);
 
@@ -125,6 +138,10 @@ void World::init() {
             }
 
             tile.hasTree = false;
+            if (((x == 17 || x == 18 ) && (y == 0) )) {
+                tile.hasTree = true;
+                tile.growthState = 1.f;
+            }
             if ((x == 11 && y == 5 )) {
                 tile.hasTree = true;
                 tile.growthState = 1.f;
@@ -133,6 +150,11 @@ void World::init() {
             mGrid.push_back(tile);
         }
     }
+
+    addRock(14, 19, 0);
+    addRock(0, 0, 3);
+    addRock(3 , 0, 2);
+    addRock(14, 0, 1);
 
     for (int y = 15; y < MAP_HEIGHT; y++) {
         for (int x = 15; x < MAP_WIDTH; x++) {
@@ -162,14 +184,6 @@ void World::init() {
         }
         lakeX = max(0, min(lakeX, MAP_WIDTH - 1));
         lakeY = max(0, min(lakeY, MAP_HEIGHT -1));
-    }*/
-
-    /*for (auto& tile : mGrid) {
-        if (!tile.isWater && !tile.hasHouse && !tile.hasFence && !tile.hasTree) {
-            if (rand() % 100 < 5) {
-                tile.hasRock = true;
-            }
-        }
     }*/
 
     mTerrainMesh.clear();
@@ -234,15 +248,28 @@ void World::init() {
                 Vector2f wUVBaseRight = {wX, wY - (waterCapHeight / 2.f)};
                 Vector2f wUVBaseLeft = {0.f, wY - (waterCapHeight / 2.f)};
 
-                targetMesh->append(Vertex{ptTop, Color(255, 255, 255), wUvTop});
-                targetMesh->append(Vertex{ptRight, Color(255, 255, 255), wUvRight});
-                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255), wUvLeft});
+                targetMesh->append(Vertex{ptTop, Color(255, 255, 255, 150), wUvTop});
+                targetMesh->append(Vertex{ptRight, Color(255, 255, 255, 150), wUvRight});
+                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255, 150 ), wUvLeft});
                 
-                targetMesh->append(Vertex{ptBottom, Color(255, 255, 255), wUvBottom}); 
-                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255), wUvLeft});
-                targetMesh->append(Vertex{ptRight, Color(255, 255, 255), wUvRight});
-
-                Color rightShade(180, 180, 180); 
+                targetMesh->append(Vertex{ptBottom, Color(255, 255, 255, 150 ), wUvBottom}); 
+                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255, 150 ), wUvLeft});
+                targetMesh->append(Vertex{ptRight, Color(255, 255, 255, 150), wUvRight});
+                
+                bool showRightWall = true;
+                if (x + 1 < MAP_WIDTH) {
+                    if (mGrid[(x + 1) + y * MAP_WIDTH].isWater) {
+                        showRightWall = false; // Neighbor is water, hide the wall!
+                    }
+                }
+                bool showLeftWall = true;
+                if (y + 1 < MAP_HEIGHT) {
+                    if (mGrid[x + (y + 1) * MAP_WIDTH].isWater) {
+                        showLeftWall = false; // Neighbor is water, hide the wall!
+                    }
+                }
+                if (showRightWall) {
+                Color rightShade(255, 255, 255, 150); 
                 
                 targetMesh->append(Vertex{ptRight,      rightShade, wUvRight});
                 targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
@@ -251,8 +278,9 @@ void World::init() {
                 targetMesh->append(Vertex{ptBottom,     rightShade, wUvBottom});
                 targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
                 targetMesh->append(Vertex{ptBottomDown, rightShade, wUVBaseCenter});
-
-                Color leftShade(130, 130, 130);
+                }
+                if (showLeftWall) {
+                Color leftShade(255, 255, 255, 150);
 
                 targetMesh->append(Vertex{ptLeft,       leftShade, wUvLeft});
                 targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
@@ -261,6 +289,7 @@ void World::init() {
                 targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
                 targetMesh->append(Vertex{ptBottomDown, leftShade, wUVBaseCenter});
                 targetMesh->append(Vertex{ptLeftDown,   leftShade, wUVBaseLeft});
+                }
             }
             else {
                 targetMesh = &mTerrainMesh;
@@ -473,12 +502,57 @@ void World::draw(RenderTarget& target) {
 
     for (const auto& tile : mGrid) {
         if (tile.hasRock) {
-            Sprite rockSprite(mRockTexture);
-            rockSprite.setScale({0.2f, 0.2f});
+            Texture* tex;
+            float scale = 1.f;
+            float offsetX = 5.f;
+            float offsetY = 20.f;
+            float gridShiftX = 0.f;
+            float gridShiftY = 0.f;
+            switch (tile.rockVariant) {
+                case 0: tex = &mRockTexture1;
+                        scale = 0.7f;
+                        offsetX = 5.f;
+                        offsetY = 20.f;
+                        break;
+                case 1: tex = &mRockTexture2;
+                        scale = 0.5f;
+                        offsetX = 5.f;
+                        offsetY = 30.f;
+                        break;
+                case 2: tex = &mRockTexture3;
+                        scale = 0.5f;
+                        offsetX = 10.f;
+                        offsetY = 30.f;
+                        gridShiftX = 1.f;
+                        gridShiftY = 1.f;
+                        break;
+                case 3: tex = &mRockTexture4; 
+                        scale = 0.5f;
+                        offsetX = 5.f;
+                        offsetY = 20.f;
+                        gridShiftX = 1.f;
+                        gridShiftY = 1.f;
+                        break;
+                case 4: tex = &mRockTexture5; 
+                        scale = 0.5f;
+                        offsetX = 5.f;
+                        offsetY = 20.f;
+                        break;
+
+            }
+            Sprite rockSprite(*tex);
+            rockSprite.setScale({scale, scale});
             FloatRect bounds = rockSprite.getLocalBounds();
             rockSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y});
-            Vector2f pos = gridToIso(tile.x, tile.y);
-            rockSprite.setPosition({pos.x, pos.y + TILE_HEIGHT / 2.f});
+            Vector2f pos = gridToIso(tile.x + gridShiftX, tile.y + gridShiftY);
+            if (tile.rockVariant != 0 && tile.rockVariant != 1) {
+            float correctionX = 15.f;  
+            float correctionY = 10.f;
+            rockSprite.setPosition({pos.x + correctionX, pos.y + correctionY + TILE_HEIGHT / 2.f});
+            }
+            else {
+                rockSprite.setPosition({pos.x + offsetX, pos.y + offsetY + TILE_HEIGHT / 2.f});
+            }
             
             renderQueue.push_back({
                 rockSprite.getPosition().y,
@@ -547,7 +621,7 @@ void World::setHoveredTile(Vector2i gridPos) {
     }
 }
 
-Vector2f World::gridToIso(int x, int y) {
+Vector2f World::gridToIso(float x, float y) {
     float isoX = (x - y) * (TILE_WIDTH / 2.f);
     float isoY = (x + y) * (TILE_HEIGHT / 2.f);
     return Vector2f(isoX, isoY);
@@ -615,7 +689,7 @@ bool World::isPositionBlocked(Vector2f worldPos) {
 
     float gridFloatX = (adjustedY / halfH + worldPos.x / halfW) / 2.f;
     float gridFloatY = (adjustedY / halfH - worldPos.x / halfW) / 2.f;
-    float topEdgeBuffer = 0.9f;
+    float topEdgeBuffer = 0.1f;
 
     if (gridFloatX < topEdgeBuffer || 
         gridFloatX >= static_cast<float>(MAP_WIDTH) ||
@@ -624,14 +698,14 @@ bool World::isPositionBlocked(Vector2f worldPos) {
             return true;
     }
 
-    float playerSizeBuffer = 0.3f;
+    float playerSizeBuffer = 0.35f;
     auto checkTile = [&](int x, int y) -> bool {
         if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return true;
         if ((x == 8 || x == 9) && (y == 7)) return false;
         int idx = x + y * MAP_WIDTH;
         if (mGrid[idx].hasHouse) return true;
         if (mGrid[idx].hasFence) return true;
-        if (mGrid[idx].hasRock) return true;
+        if (mGrid[idx].isSolid) return true;
         if (mGrid[idx].isWater) return true;
         if (mGrid[idx].hasTree && mGrid[idx].growthState >= 0.66f) return true;
         return false;
@@ -742,6 +816,32 @@ void World::updateEnvironment(Time dt) {
             bird.sprite.setPosition({-50.f, newY});
             float driftY = 5.f - (rand() % 10);
             bird.velocity.y = driftY;
+        }
+    }
+}
+
+void World::addRock(int x, int y, int variant) {
+    int index = x + y * MAP_WIDTH;
+    if (index >= mGrid.size()) return;
+
+    mGrid[index].hasRock = true;
+    mGrid[index].rockVariant = variant;
+    mGrid[index].isSolid = true;
+    mGrid[index].isWater = false;
+
+    int width = 2;
+    int height = 2;
+
+    for (int offsetY = 0; offsetY < height; offsetY++) {
+        for (int offsetX = 0; offsetX < width; offsetX++) {
+            
+            int targetX = x + offsetX;
+            int targetY = y + offsetY;
+
+            if (targetX < MAP_WIDTH && targetY < MAP_HEIGHT) {
+                int targetIdx = targetX + targetY * MAP_WIDTH;
+                mGrid[targetIdx].isSolid = true;
+            }
         }
     }
 }

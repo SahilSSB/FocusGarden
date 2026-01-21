@@ -7,6 +7,8 @@ struct Tile {
     bool hasFence = false;
     bool isWater = false;
     bool hasRock = false;
-    int fenceVariant = 0; 
+    int fenceVariant = 0;
+    int rockVariant = 0; 
+    bool isSolid = false;
     float growthState = 0.0f;
 };
