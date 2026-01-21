@@ -76,6 +76,11 @@ void Player::update(Time dt, GameState currentState) {
 void Player::handleInput(GameState state) {
     mVelocity = {0.f, 0.f};
 
+    float walkSpeed = mSpeed;
+
+    if (Keyboard::isKeyPressed(Keyboard::Key::LShift)) walkSpeed = SPRINT_SPEED;
+    else walkSpeed = mSpeed;
+
     float inputX = 0.f;
     float inputY = 0.f;
     
@@ -94,7 +99,7 @@ void Player::handleInput(GameState state) {
     if (mVelocity.x != 0 || mVelocity.y != 0) {
         float length = sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y);
         mVelocity /= length;
-        mVelocity *= mSpeed;
+        mVelocity *= walkSpeed;
 
         float angle = atan2(mVelocity.y, mVelocity.x) * 180.f / PI;
         if (angle < 0) angle += 360.f;
@@ -105,7 +110,9 @@ void Player::handleInput(GameState state) {
 }
 
 void Player::updateAnimation(Time dt) {
-    mAnimationTimer += dt.asSeconds();
+    float multiplier = 1.f;
+    if (Keyboard::isKeyPressed(Keyboard::Key::LShift)) multiplier = 2.f;
+    mAnimationTimer += dt.asSeconds() * multiplier;
     if (mAnimationTimer >= mFrameDuration) {
         mAnimationTimer = 0.f;
 

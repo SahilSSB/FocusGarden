@@ -35,6 +35,7 @@ class Player {
         //state
         sf::Vector2f mVelocity;
         float mSpeed = 150.f;
+        const float SPRINT_SPEED = 200.f;
    
 
         //animation
