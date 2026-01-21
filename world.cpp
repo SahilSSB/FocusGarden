@@ -487,7 +487,7 @@ void World::draw(RenderTarget& target) {
 
         float scaleValue = (TILE_WIDTH * 6.f) / static_cast<float>(hSize.x);
         houseSprite.setScale({scaleValue, scaleValue});
-        houseSprite.move({10.f, 50.f});
+        houseSprite.move({10.f, 45.f});
 
         renderQueue.push_back({
             houseSprite.getPosition().y,

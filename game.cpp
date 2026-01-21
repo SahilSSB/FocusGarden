@@ -14,7 +14,8 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mTimerText(mFont),
         mStatusText(mFont),
         mResumeText(mFont),
-        mQuitText(mFont)
+        mQuitText(mFont),
+        mPromptText(mFont)
 {
     mWindow.setFramerateLimit(60);
     ContextSettings settings;
@@ -60,11 +61,29 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mStatusText.setOutlineColor(Color::Black);
         mStatusText.setOutlineThickness(1.f);
         mStatusText.setString("Press SPACE to start Focus");
-        
+
+        mPromptBox.setSize({400.f, 120.f});
+        mPromptBox.setFillColor(sf::Color(0, 0, 0, 220));
+        mPromptBox.setOutlineColor(sf::Color::White);
+        mPromptBox.setOutlineThickness(2.f);
+        mPromptBox.setOrigin({200.f, 60.f});
+        mPromptBox.setPosition({400.f, 500.f});
+
+        mPromptText.setFont(mFont);
+        mPromptText.setString("Enter House?\n\n[Y] Yes    [N] No");
+        mPromptText.setCharacterSize(24);
+        mPromptText.setFillColor(sf::Color::White);
+
+        sf::FloatRect textBounds = mPromptText.getLocalBounds();
+        mPromptText.setOrigin({textBounds.size.x / 2.f, textBounds.size.y / 2.f});
+        mPromptText.setPosition({400.f, 500.f});
+                
         FloatRect mapBounds = mWorld.getBounds();
         mWorldView = mWindow.getDefaultView();
         mWorldView.setCenter(mapBounds.getCenter());
         mWorldView.zoom(1.2f);
+
+        mShowDoorPromt = false;
 
         mUIView = mWindow.getDefaultView();
     }
@@ -81,7 +100,6 @@ void Game::run() {
     while (mWindow.isOpen()) {
         processEvents();
         Time dt = clock.restart();
-        processEvents();
         update(dt);
 
         render();
@@ -93,6 +111,29 @@ void Game::processEvents() {
         if (event->is<Event::Closed>()) {
             mWorld.save("garden.dat");
             mWindow.close();
+        }
+
+        if (mShowDoorPromt) {
+            if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
+                if (keyPress->scancode == Keyboard::Scancode::Y ||
+                    keyPress->scancode == Keyboard::Scancode::Enter) {
+                        
+                        mShowDoorPromt = false;
+                        mState = GameState::INSIDE_HOUSE;
+                        mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10, 19));
+                        mWorld.disablePlayerCollision();
+                        mWorldView.setSize({800.f, 600.f});
+                        cout << "Entered house" << endl;
+                    }
+                else if (keyPress->scancode == Keyboard::Scancode::N ||
+                         keyPress->scancode == Keyboard::Scancode::Escape) {
+
+                            mShowDoorPromt = false;
+                            Vector2f currentPos = mWorld.getPlayerPosition();
+                            mWorld.setPlayerPosition({currentPos.x, currentPos.y + 15.f});
+                        }
+            }
+            continue;
         }
         else if (const auto* resized = event->getIf<Event::Resized>()) {
             float w = static_cast<float>(resized->size.x);
@@ -154,7 +195,9 @@ void Game::processEvents() {
             if (keyPress->scancode == Keyboard::Scancode::Space) {
                 mIsFocussing = !mIsFocussing;
                 if (mIsFocussing) {
+                    if (mFocusTimer <= 0.f) {
                     mFocusTimer = TARGET_TIME;
+                    }
                     mStatusText.setString("FOCUSSING... (Planting Locked)");
                     mStatusText.setFillColor(Color::Green);
                 }
@@ -179,6 +222,9 @@ void Game::update(Time dt) {
     if (mIsPaused) {
         return;
     }
+    if (mShowDoorPromt) {
+        return;
+    }
     if (mIsFocussing) {
         mFocusTimer -= dt.asSeconds();
         if (mFocusTimer <= 0.f) {
@@ -200,6 +246,10 @@ void Game::update(Time dt) {
     Vector2f targetPos = mWorld.getPlayerPosition();
 
     if (mState == GameState::ROAMING) {
+        if (mWorld.checkDoorEntry(mWorld.getPlayerPosition())) {
+            mShowDoorPromt = true;
+            return;
+        }
         if (mWorld.checkDoorEntry(mWorld.getPlayerPosition())) {
             mState = GameState::INSIDE_HOUSE;
             mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10, 19));
@@ -284,6 +334,11 @@ void Game::render() {
     mWindow.setView(mWindow.getDefaultView());
     mWindow.draw(mTimerText);
     mWindow.draw(mStatusText);
+
+    if (mShowDoorPromt) {
+        mWindow.draw(mPromptBox);
+        mWindow.draw(mPromptText);
+    }
 
     if  (mIsPaused) {
         mWindow.draw(mMenuBackrgound);
