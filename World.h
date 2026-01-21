@@ -4,17 +4,10 @@
 #include <string>
 #include <fstream>
 #include "Player.h"
+#include "Interior.h"
+#include "tile.h"
 using namespace std;
 using namespace sf;
-
-struct Tile {
-    int x, y;
-    bool hasTree;
-    bool hasHouse = false;
-    bool hasFence = false;
-    int fenceVariant = 0;
-    float growthState = 0.0f;
-};
 
 struct Cloud {
     Sprite sprite;
@@ -62,10 +55,14 @@ class World {
         void setPlayerPosition(sf::Vector2f pos) { mPlayer.setPosition(pos); }
         void drawPlayer(sf::RenderTarget& target) { mPlayer.draw(target); }
         
-        void disablePlayerCollision() { mPlayer.setCollissionCallback(nullptr); }
+        void disablePlayerCollision() { mCheckCollision = false; }
+        void enablePlayerCollision() { mCheckCollision = true;}
 
         void initEnvironment();
         void updateEnvironment(Time dt);
+
+        Interior& getInterior() { return mInterior; }
+        void initInterior() { mInterior.init(); }
         
     private:
         const int MAP_WIDTH = 20;
@@ -78,6 +75,7 @@ class World {
         const int HOUSE_H = 6;
         const int HOUSE_W = 8;
         ConvexShape mHoverShape;
+        bool mCheckCollision = true;
         
         vector<Tile> mGrid;
         Vector2i mActiveSapling = {-1, -1};
@@ -87,6 +85,7 @@ class World {
         vector<Bird> mBirds;
 
         Player mPlayer;
+        Interior mInterior;
 
         //resources
         Texture mTileTexture;

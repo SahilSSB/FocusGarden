@@ -14,8 +14,11 @@ void Player::init(const string& texturePath) {
         throw runtime_error("Could not load Texture. Is it in the correct folder?");
     }
     mSprite.setTexture(mTexture);
-    mSprite.setTextureRect(IntRect({0, 0}, {FRAME_WIDTH, FRAME_HEIGHT}));
-    mSprite.setOrigin({FRAME_WIDTH / 2.f, static_cast<float>(FRAME_HEIGHT)});
+
+    float frameWidth = 16.f;
+    float frameHeight = 24.f;
+    mSprite.setOrigin({frameWidth / 2.f, 16.f});
+    mSprite.setTextureRect(IntRect({0, 0},{(int)frameWidth, (int)frameHeight}));
     mSprite.setScale({1.8f, 1.8f});
 }
 
@@ -129,4 +132,5 @@ void Player::updateAnimation(Time dt) {
 
 void Player::draw(RenderTarget& target) {
     target.draw(mSprite);
+    
 }

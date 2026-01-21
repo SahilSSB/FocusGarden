@@ -191,6 +191,7 @@ void World::init() {
         }
     }
     initEnvironment();
+    initInterior();
 }
 
 void World::update(Time dt, bool isFocussing) {
@@ -377,6 +378,10 @@ void World::toggleTree(int x, int y) {
             cout << "Blocked\n";
                 return;
             }
+        if (mGrid[index].hasFence) {
+            cout << "Blocked\n";
+            return;
+        }
         if (mGrid[index].hasTree && mGrid[index].growthState >= 1.f) {
             return;
         }
@@ -471,6 +476,8 @@ void World::load(const string& filename) {
 
 bool World::isPositionBlocked(Vector2f worldPos) {
     Vector2i gridPos = isoToGrid(worldPos.x, worldPos.y);
+
+    if (!mCheckCollision) return false;
 
     float halfW = TILE_WIDTH / 2.f;
     float halfH = TILE_HEIGHT / 2.f;

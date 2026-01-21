@@ -5,6 +5,7 @@
 #include "Game.h"
 #include "Player.h"
 #include "World.h"
+#include "Interior.h"
 using namespace std;
 using namespace sf;
 
@@ -39,6 +40,7 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
 
     try {
         mWorld.init();
+        mWorld.initInterior();
 
         mWorld.load("garden.dat");
 
@@ -199,13 +201,22 @@ void Game::update(Time dt) {
         if (mWorld.checkDoorEntry(mWorld.getPlayerPosition())) {
             mState = GameState::INSIDE_HOUSE;
 
-            mWorld.setPlayerPosition({400.f, 300.f});
+            mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10,19));
             mWorld.disablePlayerCollision();
 
             mWorldView.setCenter({400.f, 300.f});
             mWorldView.setSize({800.f, 600.f});
         }
-    } ;
+    }
+    else if (mState == GameState::INSIDE_HOUSE) {
+        if (mWorld.getInterior().isExit(mWorld.getPlayerPosition())) {
+            mState = GameState::ROAMING;
+            mWorld.setPlayerPosition(mWorld.gridToIso(9, 8));
+            mWorld.enablePlayerCollision();
+            mWorldView.setCenter(mWorld.getPlayerPosition());
+            cout << "Left the house" << endl;
+        }
+    }
 }
 
 void Game::render() {
@@ -217,7 +228,17 @@ void Game::render() {
     }
     else if (mState == GameState::INSIDE_HOUSE) {
         mWindow.clear(sf::Color::Black);
+        mWorld.getInterior().draw(mWindow);
+        
         mWorld.drawPlayer(mWindow);
+
+        // --- DEBUG DOT ---
+        CircleShape dot(3); // A tiny circle radius 3
+        dot.setFillColor(sf::Color::Red);
+        dot.setOrigin({3, 3}); // Center the dot on itself
+        dot.setPosition(mWorld.getPlayerPosition()); // Move to Player's exact math coordinate
+        mWindow.draw(dot);
+        // -----------------
     }
     mWindow.setView(mWindow.getDefaultView());
     mWindow.draw(mTimerText);
