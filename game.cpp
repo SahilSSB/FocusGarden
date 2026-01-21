@@ -197,15 +197,17 @@ void Game::update(Time dt) {
     
     mWorld.update(dt, mIsFocussing);
 
+    Vector2f targetPos = mWorld.getPlayerPosition();
+
     if (mState == GameState::ROAMING) {
         if (mWorld.checkDoorEntry(mWorld.getPlayerPosition())) {
             mState = GameState::INSIDE_HOUSE;
-
-            mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10,19));
+            mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10, 19));
             mWorld.disablePlayerCollision();
-
-            mWorldView.setCenter({400.f, 300.f});
             mWorldView.setSize({800.f, 600.f});
+            mWorldView.setCenter(mWorld.getPlayerPosition());
+            cout << "Entered house" << endl;
+            return;
         }
     }
     else if (mState == GameState::INSIDE_HOUSE) {
@@ -213,9 +215,48 @@ void Game::update(Time dt) {
             mState = GameState::ROAMING;
             mWorld.setPlayerPosition(mWorld.gridToIso(9, 8));
             mWorld.enablePlayerCollision();
-            mWorldView.setCenter(mWorld.getPlayerPosition());
+            FloatRect mapBounds = mWorld.getBounds();
+            mWorldView.setCenter(mapBounds.getCenter());
+            mWorldView.zoom(1.2f);
             cout << "Left the house" << endl;
+            return;
         }
+        FloatRect mapBounds = mWorld.getInterior().getBounds();
+        Vector2f viewSize = mWorldView.getSize();
+
+        float minX = mapBounds.position.x + viewSize.x / 2.f;
+        float maxX = mapBounds.position.x + mapBounds.size.x - viewSize.x / 2.f;
+        float minY = mapBounds.position.y + viewSize.y / 2.f;
+        float maxY = mapBounds.position.y + mapBounds.size.y - viewSize.y / 2.f;
+
+        if (targetPos.x < minX) targetPos.x = minX;
+        if (targetPos.x > maxX) targetPos.x = maxX;
+        if (targetPos.y < minY) targetPos.y = minY;
+        if (targetPos.y > maxY) targetPos.y = maxY;
+
+        if (minX > maxX) targetPos.x = mapBounds.position.x + mapBounds.size.x / 2.f;
+        if (minY > maxY) targetPos.y = mapBounds.position.y + mapBounds.size.y / 2.f;
+
+        mWorldView.setCenter(targetPos);
+    }
+    if (mState == GameState::ROAMING) {
+        FloatRect mapBounds = mWorld.getBounds();
+        Vector2f viewSize = mWorldView.getSize();
+
+        float minX = mapBounds.position.x + viewSize.x / 2.f;
+        float maxX = mapBounds.position.x + mapBounds.size.x - viewSize.x / 2.f;
+        float minY = mapBounds.position.y + viewSize.y / 2.f;
+        float maxY = mapBounds.position.y + mapBounds.size.y - viewSize.y / 2.f;
+
+        if (targetPos.x < minX) targetPos.x = minX;
+        if (targetPos.x > maxX) targetPos.x = maxX;
+        if (targetPos.y < minY) targetPos.y = minY;
+        if (targetPos.y > maxY) targetPos.y = maxY;
+
+        if (minX > maxX) targetPos.x = mapBounds.position.x + mapBounds.size.x / 2.f;
+        if (minY > maxY) targetPos.y = mapBounds.position.y + mapBounds.size.y / 2.f;
+
+        mWorldView.setCenter(targetPos);
     }
 }
 
@@ -233,10 +274,10 @@ void Game::render() {
         mWorld.drawPlayer(mWindow);
 
         // --- DEBUG DOT ---
-        CircleShape dot(3); // A tiny circle radius 3
+        CircleShape dot(3);
         dot.setFillColor(sf::Color::Red);
-        dot.setOrigin({3, 3}); // Center the dot on itself
-        dot.setPosition(mWorld.getPlayerPosition()); // Move to Player's exact math coordinate
+        dot.setOrigin({3, 3});
+        dot.setPosition(mWorld.getPlayerPosition());
         mWindow.draw(dot);
         // -----------------
     }

@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 
 void Interior::init() {
-    if (!mFloorTexture.loadFromFile("")) {
+    if (!mFloorTexture.loadFromFile("textures/house /house_tile.png")) {
         Image img;
         img.resize({32, 32}, Color(139, 69, 19));
         if (!mFloorTexture.loadFromImage(img)) {
@@ -11,7 +11,7 @@ void Interior::init() {
         }
     }
     mMesh.setPrimitiveType(PrimitiveType::Triangles);
-    mMesh.resize(ROOM_WIDTH * ROOM_HEIGHT * 6);
+    mMesh.resize(ROOM_WIDTH * ROOM_HEIGHT * 18);
 
     
     Vector2u texSize = mFloorTexture.getSize();
@@ -19,29 +19,59 @@ void Interior::init() {
     float tsX = static_cast<float>(texSize.x);
     float tsY = static_cast<float>(texSize.y);
 
-    Vector2f uv0 = {0.f, 0.f};
-    Vector2f uv1 = {tsX, 0.f};
-    Vector2f uv2 = {0.f, tsY};
-    Vector2f uv3 = {tsX, tsY};
-
     for (int y = 0; y < ROOM_HEIGHT; y++) {
         for (int x = 0; x < ROOM_WIDTH; x ++) {
+            float tileCapHeight = tsX / 1.7f;
+
             Vector2f pos = IgridToIso(x, y);
 
-            Vector2f ptTop = pos;
-            Vector2f ptRight = {pos.x + TILE_WIDTH / 2.f, pos.y + TILE_HEIGHT / 2.f};
-            Vector2f ptBottom = {pos.x, pos.y + TILE_HEIGHT};
-            Vector2f ptLeft = {pos.x - TILE_WIDTH / 2.f, pos.y + TILE_HEIGHT / 2.f};
+            Vector2f uvTop = {tsX / 2.f , 0.f};
+            Vector2f uvBottom = {tsX / 2.f, tileCapHeight};
+            Vector2f uvRight = {tsX, tileCapHeight / 2.f};
+            Vector2f uvLeft = {0, tileCapHeight / 2.f};
 
-            int idx = (x + y * ROOM_WIDTH) * 6;
+            Vector2f ptTop    = {pos.x, pos.y};
+            Vector2f ptBottom = {pos.x, pos.y + TILE_HEIGHT };
+            Vector2f ptRight  = {pos.x + TILE_WIDTH / 2.f, pos.y + TILE_HEIGHT / 2.f};
+            Vector2f ptLeft   = {pos.x - TILE_WIDTH / 2.f, pos.y + TILE_HEIGHT / 2.f};
+            
+            Vector2f ptRightDown  = ptRight + Vector2f(0, TILE_DEPTH);
+            Vector2f ptBottomDown = ptBottom + Vector2f(0, TILE_DEPTH);
+            Vector2f ptLeftDown   = ptLeft + Vector2f(0, TILE_DEPTH);
 
-            mMesh[idx+0] = {ptTop, Color::White, uv0};
-            mMesh[idx+1] = {ptRight, Color::White, uv1};
-            mMesh[idx+2] = {ptLeft, Color::White, uv2};
+            Vector2f uvBaseCenter = {tsX / 2.f, tsY};
+            Vector2f uvBaseRight = {tsX, tsY - (tileCapHeight / 2.f)};
+            Vector2f uvBaseLeft = {0.f, tsY - (tileCapHeight / 2.f)};
 
-            mMesh[idx+3] = {ptRight, Color::White, uv1};
-            mMesh[idx+4] = {ptBottom, Color::White, uv3};
-            mMesh[idx+5] = {ptLeft, Color::White, uv2};
+            int idx = (x + y * ROOM_WIDTH) * 18;
+
+            mMesh[idx+0] = {ptTop, Color::White, uvTop};
+            mMesh[idx+1] = {ptRight, Color::White, uvRight};
+            mMesh[idx+2] = {ptLeft, Color::White, uvLeft};
+
+            mMesh[idx+3] = {ptRight, Color::White, uvBottom};
+            mMesh[idx+4] = {ptBottom, Color::White, uvLeft};
+            mMesh[idx+5] = {ptLeft, Color::White, uvRight};
+
+            Color rightShade(180, 180, 180);
+
+            mMesh[idx+6] =  {ptRight,      rightShade, uvRight};
+            mMesh[idx+7] =  {ptRightDown,  rightShade, uvBaseRight};
+            mMesh[idx+8] =  {ptBottom,     rightShade, uvBottom};
+
+            mMesh[idx+9] =  {ptBottom,     rightShade, uvBottom};
+            mMesh[idx+10] =  {ptRightDown,  rightShade, uvBaseRight};
+            mMesh[idx+11] =  {ptBottomDown, rightShade, uvBaseCenter};
+
+            Color leftShade(130, 130, 130);
+
+            mMesh[idx+12] =  {ptLeft,       leftShade, uvLeft};
+            mMesh[idx+13] =  {ptBottom,     leftShade, uvBottom};
+            mMesh[idx+14] =  {ptLeftDown,   leftShade, uvBaseLeft};
+
+            mMesh[idx+15] =  {ptBottom,     leftShade, uvBottom};
+            mMesh[idx+16] =  {ptBottomDown, leftShade, uvBaseCenter};
+            mMesh[idx+17] =  {ptLeftDown,   leftShade, uvBaseLeft};
         }
     }
 }
@@ -102,4 +132,8 @@ bool Interior::isBlocked(Vector2f playerPos) {
         return true;
     }
     return false;
+}
+
+FloatRect Interior::getBounds() {
+    return mMesh.getBounds();
 }

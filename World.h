@@ -80,9 +80,14 @@ class World {
         vector<Tile> mGrid;
         Vector2i mActiveSapling = {-1, -1};
         VertexArray mTerrainMesh;
+        VertexArray mWaterMesh;
         Vector2i mHouseAnchor;
         vector<Cloud> mClouds;
         vector<Bird> mBirds;
+
+        void addBlock(VertexArray& mesh, int x, int y, const Vector2f& uvTop,
+                    const Vector2f& uvSide, bool leftWall, bool rightWall);
+        void addWaterBlock(int x, int y);
 
         Player mPlayer;
         Interior mInterior;
@@ -98,5 +103,7 @@ class World {
         Texture mBirdTexture;
         Texture mFenceTexture;
         Texture mFenceTexture1;
+        Texture mRockTexture;
+        Texture mWaterTexture;
 
 };

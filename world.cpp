@@ -46,6 +46,14 @@ void World::init() {
         return this->isPositionBlocked(pos);
    });
 
+   if (!mRockTexture.loadFromFile("textures/rock.png")) {
+        throw runtime_error("Failed to load rock texture. Is it in the correct folder?");
+   }
+
+   if (!mWaterTexture.loadFromFile("textures/tiles/water_tile.png")) {
+        throw runtime_error("Failed to load water texture. Is it in the correct folder?");
+   }
+
    if (!mFenceTexture.loadFromFile("textures/house /fence1.png")) {
        throw runtime_error("Failed to load fens texture. Is it in the correct folder?");
     }
@@ -126,9 +134,53 @@ void World::init() {
         }
     }
 
+    for (int y = 15; y < MAP_HEIGHT; y++) {
+        for (int x = 15; x < MAP_WIDTH; x++) {
+            int idx = x + y * MAP_WIDTH;
+            mGrid[idx].isWater = true;
+            mGrid[idx].hasTree = false;
+            mGrid[idx].hasRock = false;
+        }
+    }
+    /*int lakeX = rand() % (MAP_WIDTH - 6) + 3;
+    int lakeY = rand() % (MAP_HEIGHT - 6) + 3;
+    int lakeSize = 15;
+
+    for (int i = 0; i < lakeSize; i++) {
+        int idx = lakeX + lakeY * MAP_WIDTH;
+        if (!mGrid[idx].hasHouse && !mGrid[idx].hasFence) {
+            mGrid[idx].isWater = true;
+            mGrid[idx].hasTree = false;
+        }
+
+        int dir = rand() % 4;
+        switch(dir) {
+            case 0: lakeX++; break;
+            case 1: lakeX--; break;
+            case 2: lakeY++; break;
+            case 3: lakeY--; break;
+        }
+        lakeX = max(0, min(lakeX, MAP_WIDTH - 1));
+        lakeY = max(0, min(lakeY, MAP_HEIGHT -1));
+    }*/
+
+    /*for (auto& tile : mGrid) {
+        if (!tile.isWater && !tile.hasHouse && !tile.hasFence && !tile.hasTree) {
+            if (rand() % 100 < 5) {
+                tile.hasRock = true;
+            }
+        }
+    }*/
+
+    mTerrainMesh.clear();
+    mWaterMesh.clear();
+
     //Vertex array 
     mTerrainMesh.setPrimitiveType(PrimitiveType::Triangles);
     mTerrainMesh.resize(MAP_WIDTH * MAP_HEIGHT * 18);
+
+    mWaterMesh.setPrimitiveType(PrimitiveType::Triangles);
+    Vector2u waterSize = mWaterTexture.getSize();
 
     Vector2u texSize = mTileTexture.getSize();
     float tsX = static_cast<float>(texSize.x);
@@ -145,13 +197,15 @@ void World::init() {
     Vector2f uvBaseCenter = {tsX / 2.f, tsY};
     Vector2f uvBaseRight = {tsX, tsY - (capHeight / 2.f)};
     Vector2f uvBaseLeft = {0.f, tsY - (capHeight / 2.f)};
-
+    
     //populate array 
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
             float isoX = (x - y) * (TILE_WIDTH / 2.f);
             float isoY = (x + y) * (TILE_HEIGHT / 2.f);
-
+            
+            Tile& tile = mGrid[x + y * MAP_WIDTH];
+            
             Vector2f ptTop    = {isoX, isoY};
             Vector2f ptBottom = {isoX, isoY + TILE_HEIGHT };
             Vector2f ptRight  = {isoX + TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
@@ -159,35 +213,86 @@ void World::init() {
             
             Vector2f ptRightDown  = ptRight + Vector2f(0, TILE_DEPTH);
             Vector2f ptBottomDown = ptBottom + Vector2f(0, TILE_DEPTH);
-            Vector2f ptLeftDown   = ptLeft + Vector2f(0, TILE_DEPTH);  
-        
-            Vertex* tri = &mTerrainMesh[(x + y * MAP_WIDTH) * 18];
+            Vector2f ptLeftDown   = ptLeft + Vector2f(0, TILE_DEPTH);
+            
+            VertexArray* targetMesh;
+            if (tile.isWater) {
+                targetMesh = &mWaterMesh;
+                
+                Vector2u waterTexSize = mWaterTexture.getSize();
+                float wX = static_cast<float>(waterTexSize.x);
+                float wY = static_cast<float>(waterTexSize.y);
+                
+                float waterCapHeight = wX / 1.7f;
+                
+                Vector2f wUvTop = {wX/2, 0};      
+                Vector2f wUvBottom = {wX/2, waterCapHeight}; 
+                Vector2f wUvRight = {wX, waterCapHeight/2};  
+                Vector2f wUvLeft = {0, waterCapHeight/2}; 
+                
+                Vector2f wUVBaseCenter = {wX / 2.f, wY};
+                Vector2f wUVBaseRight = {wX, wY - (waterCapHeight / 2.f)};
+                Vector2f wUVBaseLeft = {0.f, wY - (waterCapHeight / 2.f)};
 
-            tri[0] = {ptTop,    Color::White, uvTop};
-            tri[1] = {ptRight,  Color::White, uvRight};
-            tri[2] = {ptLeft,   Color::White, uvLeft};
+                targetMesh->append(Vertex{ptTop, Color(255, 255, 255), wUvTop});
+                targetMesh->append(Vertex{ptRight, Color(255, 255, 255), wUvRight});
+                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255), wUvLeft});
+                
+                targetMesh->append(Vertex{ptBottom, Color(255, 255, 255), wUvBottom}); 
+                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255), wUvLeft});
+                targetMesh->append(Vertex{ptRight, Color(255, 255, 255), wUvRight});
 
-            tri[3] = {ptBottom, Color::White, uvBottom};
-            tri[4] = {ptLeft,   Color::White, uvLeft};
-            tri[5] = {ptRight,  Color::White, uvRight};
+                Color rightShade(180, 180, 180); 
+                
+                targetMesh->append(Vertex{ptRight,      rightShade, wUvRight});
+                targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
+                targetMesh->append(Vertex{ptBottom,     rightShade, wUvBottom});
 
-            Color rightShade(180, 180, 180);
-            tri[6]  = {ptRight,       rightShade, uvRight};
-            tri[7]  = {ptRightDown,   rightShade, uvBaseRight};
-            tri[8]  = {ptBottom,      rightShade, uvBottom};
+                targetMesh->append(Vertex{ptBottom,     rightShade, wUvBottom});
+                targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
+                targetMesh->append(Vertex{ptBottomDown, rightShade, wUVBaseCenter});
 
-            tri[9]  = {ptBottom,      rightShade, uvBottom};
-            tri[10] = {ptRightDown,   rightShade, uvBaseRight};
-            tri[11] = {ptBottomDown,  rightShade, uvBaseCenter};
+                Color leftShade(130, 130, 130);
 
-            Color leftShade(130, 130, 130);
-            tri[12] = {ptLeft,        leftShade, uvLeft};
-            tri[13] = {ptBottom,      leftShade, uvBottom};
-            tri[14] = {ptLeftDown,    leftShade, uvBaseLeft};
+                targetMesh->append(Vertex{ptLeft,       leftShade, wUvLeft});
+                targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
+                targetMesh->append(Vertex{ptLeftDown,   leftShade, wUVBaseLeft});
 
-            tri[15] = {ptBottom,      leftShade, uvBottom};
-            tri[16] = {ptBottomDown,  leftShade, uvBaseCenter};
-            tri[17] = {ptLeftDown,    leftShade, uvBaseLeft};
+                targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
+                targetMesh->append(Vertex{ptBottomDown, leftShade, wUVBaseCenter});
+                targetMesh->append(Vertex{ptLeftDown,   leftShade, wUVBaseLeft});
+            }
+            else {
+                targetMesh = &mTerrainMesh;
+
+                targetMesh->append(Vertex{ptTop,    Color::White, uvTop});
+                targetMesh->append(Vertex{ptRight,  Color::White, uvRight});
+                targetMesh->append(Vertex{ptLeft,   Color::White, uvLeft});
+
+                targetMesh->append(Vertex{ptBottom, Color::White, uvBottom});
+                targetMesh->append(Vertex{ptLeft,   Color::White, uvLeft});
+                targetMesh->append(Vertex{ptRight,  Color::White, uvRight});
+
+                Color rightShade(180, 180, 180);
+                
+                targetMesh->append(Vertex{ptRight,      rightShade, uvRight});
+                targetMesh->append(Vertex{ptRightDown,  rightShade, uvBaseRight});
+                targetMesh->append(Vertex{ptBottom,     rightShade, uvBottom});
+
+                targetMesh->append(Vertex{ptBottom,     rightShade, uvBottom});
+                targetMesh->append(Vertex{ptRightDown,  rightShade, uvBaseRight});
+                targetMesh->append(Vertex{ptBottomDown, rightShade, uvBaseCenter});
+
+                Color leftShade(130, 130, 130);
+
+                targetMesh->append(Vertex{ptLeft,       leftShade, uvLeft});
+                targetMesh->append(Vertex{ptBottom,     leftShade, uvBottom});
+                targetMesh->append(Vertex{ptLeftDown,   leftShade, uvBaseLeft});
+
+                targetMesh->append(Vertex{ptBottom,     leftShade, uvBottom});
+                targetMesh->append(Vertex{ptBottomDown, leftShade, uvBaseCenter});
+                targetMesh->append(Vertex{ptLeftDown,   leftShade, uvBaseLeft});
+            }
         }
     }
     initEnvironment();
@@ -263,6 +368,8 @@ void World::draw(RenderTarget& target) {
     target.draw(mTerrainMesh, &mTileTexture);
 
     target.draw(mHoverShape);
+
+    target.draw(mWaterMesh, &mWaterTexture);
 
     vector<RenderItem> renderQueue;
 
@@ -364,6 +471,22 @@ void World::draw(RenderTarget& target) {
         [&](RenderTarget & t) {mPlayer.draw(t); }
     });
 
+    for (const auto& tile : mGrid) {
+        if (tile.hasRock) {
+            Sprite rockSprite(mRockTexture);
+            rockSprite.setScale({0.2f, 0.2f});
+            FloatRect bounds = rockSprite.getLocalBounds();
+            rockSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y});
+            Vector2f pos = gridToIso(tile.x, tile.y);
+            rockSprite.setPosition({pos.x, pos.y + TILE_HEIGHT / 2.f});
+            
+            renderQueue.push_back({
+                rockSprite.getPosition().y,
+                [rockSprite](RenderTarget& t) mutable { t.draw(rockSprite); }
+        });
+        }
+    }
+
     sort(renderQueue.begin(), renderQueue.end());
 
     for(const auto& item : renderQueue) {
@@ -379,6 +502,10 @@ void World::toggleTree(int x, int y) {
                 return;
             }
         if (mGrid[index].hasFence) {
+            cout << "Blocked\n";
+            return;
+        }
+        if (mGrid[index].isWater) {
             cout << "Blocked\n";
             return;
         }
@@ -504,6 +631,8 @@ bool World::isPositionBlocked(Vector2f worldPos) {
         int idx = x + y * MAP_WIDTH;
         if (mGrid[idx].hasHouse) return true;
         if (mGrid[idx].hasFence) return true;
+        if (mGrid[idx].hasRock) return true;
+        if (mGrid[idx].isWater) return true;
         if (mGrid[idx].hasTree && mGrid[idx].growthState >= 0.66f) return true;
         return false;
     };
