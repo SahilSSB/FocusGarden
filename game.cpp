@@ -74,15 +74,11 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mPromptBox.setPosition({400.f, 500.f});
 
         mPromptText.setFont(mFont);
-        mPromptText.setString("Enter House?\n\n[Y] Yes    [N] No");
         mPromptText.setCharacterSize(24);
         mPromptText.setFillColor(sf::Color::White);
 
-        sf::FloatRect textBounds = mPromptText.getLocalBounds();
-        mPromptText.setOrigin({textBounds.size.x / 2.f, textBounds.size.y / 2.f});
-        mPromptText.setPosition({400.f, 500.f});
-
-        mShowDoorPromt = false;
+        mShowDoorPrompt = false;
+        mShowExitPrompt = false;
                 
         Vector2u winSize = mWindow.getSize();
         float w = static_cast<float>(winSize.x);
@@ -125,12 +121,12 @@ void Game::processEvents() {
             mWindow.close();
         }
 
-        if (mShowDoorPromt) {
+        if (mShowDoorPrompt) {
             if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
                 if (keyPress->scancode == Keyboard::Scancode::Y ||
                     keyPress->scancode == Keyboard::Scancode::Enter) {
                         
-                        mShowDoorPromt = false;
+                        mShowDoorPrompt = false;
                         mState = GameState::INSIDE_HOUSE;
                         mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10, 19));
                         mWorld.disablePlayerCollision();
@@ -146,10 +142,40 @@ void Game::processEvents() {
                 else if (keyPress->scancode == Keyboard::Scancode::N ||
                          keyPress->scancode == Keyboard::Scancode::Escape) {
 
-                            mShowDoorPromt = false;
+                            mShowDoorPrompt = false;
                             Vector2f currentPos = mWorld.getPlayerPosition();
                             mWorld.setPlayerPosition({currentPos.x, currentPos.y + 15.f});
                         }
+            }
+            continue;
+        }
+
+        if (mShowExitPrompt) {
+            if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
+            if (keyPress->scancode == Keyboard::Scancode::Y ||
+                keyPress->scancode == Keyboard::Scancode::Enter) {
+                
+                mShowExitPrompt = false;
+                mState = GameState::ROAMING;
+                mWorld.setPlayerPosition(mWorld.gridToIso(9, 8));
+                Vector2u winSize = mWindow.getSize();
+                float w = static_cast<float>(winSize.x);
+                float h = static_cast<float>(winSize.y);
+                FloatRect gardenBounds = mWorld.getBounds();
+                float desiredZoom = gardenBounds.size.y / (w / 2.f);
+                if (desiredZoom <= 0.f) desiredZoom = 1.0f;
+                mWorldView.setSize({w * desiredZoom, h * desiredZoom});
+                mWorldView.setCenter(gardenBounds.getCenter());
+                mWorld.enablePlayerCollision();
+                cout << "Left the house" << endl;
+            }
+            else if (keyPress->scancode == Keyboard::Scancode::N ||
+                    keyPress->scancode == Keyboard::Scancode::Escape) {
+                
+                    mShowExitPrompt = false;
+                    Vector2f currentPos = mWorld.getPlayerPosition();
+                    mWorld.setPlayerPosition({currentPos.x, currentPos.y - 15.f});
+                }
             }
             continue;
         }
@@ -244,7 +270,7 @@ void Game::update(Time dt) {
     if (mIsPaused) {
         return;
     }
-    if (mShowDoorPromt) {
+    if (mShowDoorPrompt || mShowExitPrompt) {
         return;
     }
     if (mIsFocussing) {
@@ -269,7 +295,7 @@ void Game::update(Time dt) {
 
     if (mState == GameState::ROAMING) {
         if (mWorld.checkDoorEntry(mWorld.getPlayerPosition())) {
-            mShowDoorPromt = true;
+            mShowDoorPrompt = true;
             return;
         }
         if (mWorld.checkDoorEntry(mWorld.getPlayerPosition())) {
@@ -284,19 +310,8 @@ void Game::update(Time dt) {
     }
     else if (mState == GameState::INSIDE_HOUSE) {
         if (mWorld.getInterior().isExit(mWorld.getPlayerPosition())) {
-            mState = GameState::ROAMING;
-            mWorld.setPlayerPosition(mWorld.gridToIso(9, 8));
-            Vector2u winSize = mWindow.getSize();
-            float w = static_cast<float>(winSize.x);
-            float h = static_cast<float>(winSize.y);
-            FloatRect gardenBounds = mWorld.getBounds();
-            float desiredZoom = gardenBounds.size.y / (w / 2.f);
-            if (desiredZoom <= 0.f) desiredZoom = 1.0f;
-            mWorldView.setSize({w * desiredZoom, h * desiredZoom});
-            mWorldView.setCenter(gardenBounds.getCenter());
-            mWorld.enablePlayerCollision();
-            cout << "Left the house" << endl;
-            return;
+            mShowExitPrompt = true;
+            return;;
         }
         FloatRect mapBounds = mWorld.getInterior().getBounds();
         Vector2f viewSize = mWorldView.getSize();
@@ -362,7 +377,18 @@ void Game::render() {
     mWindow.draw(mTimerText);
     mWindow.draw(mStatusText);
 
-    if (mShowDoorPromt) {
+    if (mShowDoorPrompt || mShowExitPrompt) {
+        if (mShowDoorPrompt) {
+            mPromptText.setString("Enter House?\n\n[Y] Yes    [N] No");
+        } 
+        else if (mShowExitPrompt) {
+            mPromptText.setString("Leave House?\n\n[Y] Yes    [N] No");
+        }
+        
+        sf::FloatRect textBounds = mPromptText.getLocalBounds();
+        mPromptText.setOrigin({textBounds.size.x / 2.f, textBounds.size.y / 2.f});
+        mPromptText.setPosition({400.f, 500.f});
+
         mWindow.draw(mPromptBox);
         mWindow.draw(mPromptText);
     }

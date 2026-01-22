@@ -24,7 +24,8 @@ class Game {
     float mFocusTimer = 0.f;
     const float TARGET_TIME = 0.166f * 60.f;
 
-    bool mShowDoorPromt;
+    bool mShowDoorPrompt;
+    bool mShowExitPrompt;
     sf::RectangleShape mPromptBox;
     sf::Text mPromptText;
     
