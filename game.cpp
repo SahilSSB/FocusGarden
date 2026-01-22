@@ -166,7 +166,10 @@ void Game::processEvents() {
                         FloatRect roomBounds = mWorld.getInterior().getBounds();
                         float desiredZoom = roomBounds.size.y / (w / 2.f);
                         if (desiredZoom < 0.1f) desiredZoom = 1.f; 
-                        mWorldView.setSize({w * desiredZoom, h * desiredZoom});
+                        mWorldView.setSize({w * desiredZoom , h * desiredZoom});
+                        Vector2f center = roomBounds.getCenter();
+                        center.y -= 70.f;
+                        mWorldView.setCenter(center);
                         cout << "Entered house" << endl;
                     }
                 else if (keyPress->scancode == Keyboard::Scancode::N ||
@@ -225,7 +228,11 @@ void Game::processEvents() {
             float mapHeight = currentMapBounds.size.y;
             float desiredZoom = mapHeight / (w / 2.f);
             mWorldView.setSize({w * desiredZoom, h * desiredZoom});
-            mWorldView.setCenter(currentMapBounds.getCenter());
+            Vector2f finalCenter = currentMapBounds.getCenter();
+            if (mState == GameState::INSIDE_HOUSE) {
+                finalCenter.y -= 70.f;
+            }
+            mWorldView.setCenter(finalCenter);
         }
         else if (const auto* mousePress = event->getIf<Event::MouseButtonPressed>()) {
             if (mousePress->button == Mouse::Button::Left) {
@@ -383,9 +390,13 @@ void Game::render() {
     }
     else if (mState == GameState::INSIDE_HOUSE) {
         mWindow.clear(sf::Color::Black);
-        mWorld.getInterior().draw(mWindow);
+        mWorld.getInterior().draw(
+            mWindow,
+            mWorld.getPlayerPosition().y,
+            [&]() { mWorld.drawPlayer(mWindow); 
+            });
         
-        mWorld.drawPlayer(mWindow);
+        //mWorld.drawPlayer(mWindow);
 
         // --- DEBUG DOT ---
         CircleShape dot(3);

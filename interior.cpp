@@ -1,7 +1,10 @@
 #include "Interior.h"
 #include <iostream>
 #include <SFML/Graphics.hpp>
+using namespace sf;
+using namespace std;
 
+Interior::Interior() : mComputerSprite(mComputerTexture) {}
 void Interior::init() {
     if (!mFloorTexture.loadFromFile("textures/house /house_tile.png")) {
         Image img;
@@ -10,10 +13,22 @@ void Interior::init() {
             cerr << "Failed to load fallback texture" << endl;
         }
     }
+    if (!mComputerTexture.loadFromFile("textures/house /computer_table.png")) {
+        throw runtime_error("Failed to load computer texture");
+    }
+    mComputerSprite.setTexture(mComputerTexture, true);
+    FloatRect bounds = mComputerSprite.getLocalBounds();
+    mComputerSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y}); 
+    sf::Vector2f tilePos = IgridToIso(0, 5);
+    mComputerSprite.setScale({0.3f, 0.3f});
+    mComputerSprite.setPosition({tilePos.x, tilePos.y + (TILE_HEIGHT / 2.f) + 10.f});
+
+    generateWalls();
+
     mMesh.setPrimitiveType(PrimitiveType::Triangles);
     mMesh.resize(ROOM_WIDTH * ROOM_HEIGHT * 18);
 
-    
+
     Vector2u texSize = mFloorTexture.getSize();
 
     float tsX = static_cast<float>(texSize.x);
@@ -21,7 +36,7 @@ void Interior::init() {
 
     for (int y = 0; y < ROOM_HEIGHT; y++) {
         for (int x = 0; x < ROOM_WIDTH; x ++) {
-            float tileCapHeight = tsX / 1.7f;
+            float tileCapHeight = tsX / 2.f;
 
             Vector2f pos = IgridToIso(x, y);
 
@@ -76,8 +91,29 @@ void Interior::init() {
     }
 }
 
-void Interior::draw(RenderTarget& target) {
+void Interior::draw(RenderTarget& target, float playerY, function<void()> drawPlayerFunc) {
     target.draw(mMesh, &mFloorTexture);
+    target.draw(mWallMesh);
+
+    vector<pair<float, function<void()>>> renderQueue;
+
+    renderQueue.push_back({
+        mComputerSprite.getPosition().y,
+        [&]() { target.draw(mComputerSprite); }
+    });
+    renderQueue.push_back({
+        playerY,
+        drawPlayerFunc
+    });
+
+    sort(renderQueue.begin(), renderQueue.end(),
+    [](const auto& a, const auto& b) {
+        return a.first < b.first;
+    });
+
+    for (const auto& item : renderQueue) {
+        item.second();
+    }
     // DEBUG: Draw the Exit Tile
     sf::Vector2f pos = IgridToIso(9, 19);
 
@@ -97,7 +133,7 @@ void Interior::draw(RenderTarget& target) {
 
     target.draw(debugExit);
     
-    Vector2f computerPos = IgridToIso(10, 10); 
+    /*Vector2f computerPos = IgridToIso(0, 5); 
 
     ConvexShape debugComputer;
     debugComputer.setPointCount(4);
@@ -112,7 +148,7 @@ void Interior::draw(RenderTarget& target) {
     debugComputer.setOutlineColor(sf::Color::Blue);
     debugComputer.setOutlineThickness(1.f);
 
-    target.draw(debugComputer);
+    target.draw(debugComputer);*/
 }
 
 Vector2f Interior::IgridToIso(int x, int y) {
@@ -144,7 +180,7 @@ bool Interior::isExit(Vector2f playerPos) {
 }
 
 bool Interior::isBlocked(Vector2f playerPos) {
-    Vector2f grid = IgridToIso(playerPos.x, playerPos.y);
+    Vector2f grid = IisoToGrid(playerPos.x, playerPos.y);
     if (grid.x < 0 || grid.x >= ROOM_WIDTH || grid.y < 0 || grid.y >= ROOM_HEIGHT) {
         return true;
     }
@@ -152,7 +188,10 @@ bool Interior::isBlocked(Vector2f playerPos) {
 }
 
 FloatRect Interior::getBounds() {
-    return mMesh.getBounds();
+    FloatRect bounds = mMesh.getBounds();
+    bounds.position.y -= 120.f; 
+    bounds.size.y += 120.f;
+    return bounds;
 }
 
 bool Interior::isPositionBlocked(Vector2f worldPos) {
@@ -174,11 +213,110 @@ bool Interior::isComputer(Vector2f playerPos) {
     int gridX = static_cast<int>(grid.x);
     int gridY = static_cast<int>(grid.y);
 
-     if ((gridX == 9 && gridY == 10) ||
-        (gridX == 11 && gridY == 10) ||
-        (gridX == 10 && gridY == 9) ||
-        (gridX == 10 && gridY == 11)) { 
+     if (gridX == 1 && gridY == 5 ||
+        gridX == 1 && gridY == 6 ||
+        gridX == 1 && gridY == 4) {
             return true;
         }
     return false;
+}
+
+void Interior::generateWalls() {
+    mWallMesh.setPrimitiveType(PrimitiveType::Triangles);
+    mWallMesh.clear();
+
+    Vector2f p0 = IgridToIso(0, 0);
+    Vector2f p1 = IgridToIso(1, 0);
+    Vector2f vecX = p1 - p0;
+    Vector2f thickVecLeft = -vecX * 0.4f; 
+
+    Vector2f pY1 = IgridToIso(0, 1);
+    Vector2f vecY = pY1 - p0;
+    Vector2f thickVecRight = -vecY * 0.4f;
+
+    Color wallColorLeft(245, 222, 179);
+    Color wallColorRight(220, 200, 160);     
+    Color rimColorTop(101, 67, 33);
+    Color rimColorSide(139, 90, 43);
+
+    auto addQuad = [&](Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, Color c) {
+    mWallMesh.append(Vertex({p1, c}));
+    mWallMesh.append(Vertex({p2, c}));
+    mWallMesh.append(Vertex({p3, c}));
+    mWallMesh.append(Vertex({p3, c}));
+    mWallMesh.append(Vertex({p4, c}));
+    mWallMesh.append(Vertex({p1, c}));
+    };
+    
+    Vector2f backCorner = IgridToIso(0, 0);
+    Vector2f leftEnd = IgridToIso(0, 20);
+    Vector2f rightEnd = IgridToIso(20, 0);
+
+    float yOffset = 0.f;
+    backCorner.y += yOffset;
+    leftEnd.y += yOffset;
+    rightEnd.y += yOffset;
+
+    addQuad(
+        leftEnd, backCorner,
+        {backCorner.x, backCorner.y - WALL_HEIGHT},
+        {leftEnd.x, leftEnd.y - WALL_HEIGHT},
+        wallColorLeft
+    );
+
+    addQuad(
+        backCorner, rightEnd,
+        {rightEnd.x, rightEnd.y - WALL_HEIGHT},
+        {backCorner.x, backCorner.y - WALL_HEIGHT},
+        wallColorRight
+    );
+
+    addQuad(
+        {leftEnd.x, leftEnd.y - WALL_HEIGHT},
+        {backCorner.x, backCorner.y - WALL_HEIGHT},
+        {backCorner.x + thickVecLeft.x, backCorner.y - WALL_HEIGHT + thickVecLeft.y},
+        {leftEnd.x + thickVecLeft.x, leftEnd.y - WALL_HEIGHT + thickVecLeft.y},
+        rimColorTop
+    );
+
+    addQuad(
+        {backCorner.x, backCorner.y - WALL_HEIGHT},
+        {rightEnd.x, rightEnd.y - WALL_HEIGHT},
+        {rightEnd.x + thickVecRight.x, rightEnd.y - WALL_HEIGHT + thickVecRight.y},
+        {backCorner.x + thickVecRight.x, backCorner.y - WALL_HEIGHT + thickVecRight.y},
+        rimColorTop
+    );
+
+    addQuad(
+        {leftEnd.x + thickVecLeft.x, leftEnd.y + thickVecLeft.y},
+        leftEnd,
+        {leftEnd.x, leftEnd.y - WALL_HEIGHT},
+        {leftEnd.x + thickVecLeft.x, leftEnd.y - WALL_HEIGHT + thickVecLeft.y},
+        rimColorSide
+    );
+
+    addQuad(
+        rightEnd,
+        {rightEnd.x + thickVecRight.x, rightEnd.y + thickVecRight.y}, 
+        {rightEnd.x + thickVecRight.x, rightEnd.y - WALL_HEIGHT + thickVecRight.y},
+        {rightEnd.x, rightEnd.y - WALL_HEIGHT},
+        rimColorSide
+    );
+
+    mWallMesh.append(Vertex{{backCorner.x, backCorner.y - WALL_HEIGHT}, rimColorTop});
+    mWallMesh.append(Vertex{{backCorner.x + thickVecLeft.x, backCorner.y - WALL_HEIGHT + thickVecLeft.y}, rimColorTop});
+    mWallMesh.append(Vertex{{backCorner.x + thickVecRight.x, backCorner.y - WALL_HEIGHT + thickVecRight.y}, rimColorTop});
+    
+    Vector2f backOuterCenter = {
+        backCorner.x + thickVecLeft.x + thickVecRight.x,
+        backCorner.y - WALL_HEIGHT + thickVecLeft.y + thickVecRight.y
+    };
+    
+    addQuad(
+        {backCorner.x, backCorner.y - WALL_HEIGHT},
+        {backCorner.x + thickVecRight.x, backCorner.y - WALL_HEIGHT + thickVecRight.y},
+        backOuterCenter,
+        {backCorner.x + thickVecLeft.x, backCorner.y - WALL_HEIGHT + thickVecLeft.y},
+        rimColorTop
+    );
 }
