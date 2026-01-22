@@ -42,9 +42,6 @@ void World::init() {
    mPlayer.init("textures/Small-8-Direction-Characters_by_AxulArt.png");
    Vector2f spawnPos = gridToIso(10, 10);
    mPlayer.setPosition(spawnPos);
-   mPlayer.setCollissionCallback([this](Vector2f pos) {
-        return this->isPositionBlocked(pos);
-   });
 
    if (!mRockTexture1.loadFromFile("textures/rocks/rock.png")) {
         throw runtime_error("Failed to load rock texture. Is it in the correct folder?");
@@ -675,7 +672,12 @@ void World::load(const string& filename) {
     }
 }
 
-bool World::isPositionBlocked(Vector2f worldPos) {
+bool World::isPositionBlocked(Vector2f worldPos, GameState state) {
+
+    if (state == GameState::INSIDE_HOUSE) {
+        return mInterior.isPositionBlocked(worldPos);
+    }
+
     Vector2i gridPos = isoToGrid(worldPos.x, worldPos.y);
 
     if (!mCheckCollision) return false;

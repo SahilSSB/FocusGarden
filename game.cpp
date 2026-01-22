@@ -45,6 +45,10 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
 
         mWorld.load("garden.dat");
 
+        mWorld.getPlayer().setCollissionCallback([this](Vector2f pos) {
+            return mWorld.isPositionBlocked(pos, mState);
+        });
+
         if (!mFont.openFromFile("fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf")) {
             cerr << "WARNING: font not found" << endl;
         }
@@ -77,13 +81,21 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         sf::FloatRect textBounds = mPromptText.getLocalBounds();
         mPromptText.setOrigin({textBounds.size.x / 2.f, textBounds.size.y / 2.f});
         mPromptText.setPosition({400.f, 500.f});
-                
-        FloatRect mapBounds = mWorld.getBounds();
-        mWorldView = mWindow.getDefaultView();
-        mWorldView.setCenter(mapBounds.getCenter());
-        mWorldView.zoom(1.2f);
 
         mShowDoorPromt = false;
+                
+        Vector2u winSize = mWindow.getSize();
+        float w = static_cast<float>(winSize.x);
+        float h = static_cast<float>(winSize.y);
+        FloatRect mapBounds = mWorld.getBounds();
+        float mapHeight = mapBounds.size.y;
+        
+        float desiredZoom = mapHeight / (w / 2.f);
+        if (desiredZoom <= 0.f) desiredZoom = 1.0f;
+        
+        mWorldView = mWindow.getDefaultView(); 
+        mWorldView.setSize({w * desiredZoom, h * desiredZoom});
+        mWorldView.setCenter(mapBounds.getCenter());
 
         mUIView = mWindow.getDefaultView();
     }
@@ -122,7 +134,13 @@ void Game::processEvents() {
                         mState = GameState::INSIDE_HOUSE;
                         mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10, 19));
                         mWorld.disablePlayerCollision();
-                        mWorldView.setSize({800.f, 600.f});
+                        Vector2u winSize = mWindow.getSize();
+                        float w = static_cast<float>(winSize.x);
+                        float h = static_cast<float>(winSize.y);
+                        FloatRect roomBounds = mWorld.getInterior().getBounds();
+                        float desiredZoom = roomBounds.size.y / (w / 2.f);
+                        if (desiredZoom < 0.1f) desiredZoom = 1.f; 
+                        mWorldView.setSize({w * desiredZoom, h * desiredZoom});
                         cout << "Entered house" << endl;
                     }
                 else if (keyPress->scancode == Keyboard::Scancode::N ||
@@ -141,13 +159,17 @@ void Game::processEvents() {
             
             mUIView.setSize({w, h});
             mUIView.setCenter({w / 2.f, h / 2.f});
-            FloatRect mapBounds = mWorld.getBounds();
-            float mapHeight = mapBounds.size.y;
-
+            FloatRect currentMapBounds;
+            if (mState == GameState::INSIDE_HOUSE) {
+                currentMapBounds = mWorld.getInterior().getBounds();
+            }
+            else {
+                currentMapBounds = mWorld.getBounds();
+            }
+            float mapHeight = currentMapBounds.size.y;
             float desiredZoom = mapHeight / (w / 2.f);
-            
             mWorldView.setSize({w * desiredZoom, h * desiredZoom});
-            mWorldView.setCenter(mapBounds.getCenter());
+            mWorldView.setCenter(currentMapBounds.getCenter());
         }
         else if (const auto* mousePress = event->getIf<Event::MouseButtonPressed>()) {
             if (mousePress->button == Mouse::Button::Left) {
@@ -264,10 +286,15 @@ void Game::update(Time dt) {
         if (mWorld.getInterior().isExit(mWorld.getPlayerPosition())) {
             mState = GameState::ROAMING;
             mWorld.setPlayerPosition(mWorld.gridToIso(9, 8));
+            Vector2u winSize = mWindow.getSize();
+            float w = static_cast<float>(winSize.x);
+            float h = static_cast<float>(winSize.y);
+            FloatRect gardenBounds = mWorld.getBounds();
+            float desiredZoom = gardenBounds.size.y / (w / 2.f);
+            if (desiredZoom <= 0.f) desiredZoom = 1.0f;
+            mWorldView.setSize({w * desiredZoom, h * desiredZoom});
+            mWorldView.setCenter(gardenBounds.getCenter());
             mWorld.enablePlayerCollision();
-            FloatRect mapBounds = mWorld.getBounds();
-            mWorldView.setCenter(mapBounds.getCenter());
-            mWorldView.zoom(1.2f);
             cout << "Left the house" << endl;
             return;
         }

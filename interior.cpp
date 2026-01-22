@@ -137,3 +137,16 @@ bool Interior::isBlocked(Vector2f playerPos) {
 FloatRect Interior::getBounds() {
     return mMesh.getBounds();
 }
+
+bool Interior::isPositionBlocked(Vector2f worldPos) {
+
+    Vector2f gridPos = IisoToGrid(worldPos.x, worldPos.y);
+
+    int gridX = static_cast<int>(gridPos.x);
+    int gridY = static_cast<int>(gridPos.y);
+
+    if (gridX < 0 || gridX >= ROOM_WIDTH || gridY < 0 || gridY >= ROOM_HEIGHT) {
+        return true;
+    }
+    return false;
+}
