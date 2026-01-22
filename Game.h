@@ -37,4 +37,9 @@ class Game {
     sf::RectangleShape mMenuBackrgound;
     sf::Text mResumeText;
     sf::Text mQuitText;
+
+    bool mShowComputerUI;
+    sf::RectangleShape mMonitorFrame;
+    sf::RectangleShape mMonitorScreen;
+    sf::Text mComputerText;
 };

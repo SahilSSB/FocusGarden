@@ -15,7 +15,8 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mStatusText(mFont),
         mResumeText(mFont),
         mQuitText(mFont),
-        mPromptText(mFont)
+        mPromptText(mFont),
+        mComputerText(mFont)
 {
     mWindow.setFramerateLimit(60);
     ContextSettings settings;
@@ -52,19 +53,6 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         if (!mFont.openFromFile("fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf")) {
             cerr << "WARNING: font not found" << endl;
         }
-        mTimerText.setCharacterSize(40);
-        mTimerText.setPosition({20.f, 20.f});
-        mTimerText.setFillColor(Color::White);
-        mTimerText.setOutlineColor(Color::Black);
-        mTimerText.setOutlineThickness(2.f);
-        mTimerText.setString("25:00");
-
-        mStatusText.setCharacterSize(20);
-        mStatusText.setPosition({20.f, 70.f});
-        mStatusText.setFillColor(Color::Yellow);
-        mStatusText.setOutlineColor(Color::Black);
-        mStatusText.setOutlineThickness(1.f);
-        mStatusText.setString("Press SPACE to start Focus");
 
         mPromptBox.setSize({400.f, 120.f});
         mPromptBox.setFillColor(sf::Color(0, 0, 0, 220));
@@ -79,6 +67,26 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
 
         mShowDoorPrompt = false;
         mShowExitPrompt = false;
+
+        mShowComputerUI = false;
+
+        mMonitorFrame.setSize({600.f, 400.f});
+        mMonitorFrame.setFillColor(sf::Color(200, 200, 180));
+        mMonitorFrame.setOutlineColor(sf::Color(50, 50, 50));
+        mMonitorFrame.setOutlineThickness(4.f);
+        mMonitorFrame.setOrigin({300.f, 200.f});
+        mMonitorFrame.setPosition({400.f, 300.f});
+
+        mMonitorScreen.setSize({560.f, 320.f});
+        mMonitorScreen.setFillColor(sf::Color(20, 20, 40));
+        mMonitorScreen.setOrigin({280.f, 160.f});
+        mMonitorScreen.setPosition({400.f, 300.f});
+
+        mComputerText.setFont(mFont);
+        mComputerText.setCharacterSize(18);
+        mComputerText.setFillColor(sf::Color(0, 255, 0));
+        mComputerText.setString("SYSTEM READY...\n\n[SPACE] Start Session\n[ESC] Log Out");
+        mComputerText.setPosition({140.f, 160.f});
                 
         Vector2u winSize = mWindow.getSize();
         float w = static_cast<float>(winSize.x);
@@ -121,6 +129,28 @@ void Game::processEvents() {
             mWindow.close();
         }
 
+        if (mShowComputerUI) {
+            if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
+
+                if (keyPress->scancode == Keyboard::Scancode::Escape) {
+                    mShowComputerUI = false;
+                    Vector2u winSize = mWindow.getSize();
+                    float w = static_cast<float>(winSize.x);
+                    float h = static_cast<float>(winSize.y);
+                    FloatRect roomBounds = mWorld.getInterior().getBounds();
+                    float desiredZoom = roomBounds.size.y / (w / 2.f);
+                    if (desiredZoom < 0.1f) desiredZoom = 1.f;
+                    mWorldView.setSize({w * desiredZoom, h * desiredZoom});
+                }
+                else if (keyPress->scancode == Keyboard::Scancode::Space) {
+                    mIsFocussing = !mIsFocussing;
+                    if (mIsFocussing) {
+                        if (mFocusTimer <= 0.f) mFocusTimer = TARGET_TIME;
+                    }
+                }
+            }
+            continue;
+        }
         if (mShowDoorPrompt) {
             if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
                 if (keyPress->scancode == Keyboard::Scancode::Y ||
@@ -240,23 +270,15 @@ void Game::processEvents() {
             
         }
         else if (const auto* keyPress = event->getIf<Event::KeyPressed>()) {
-            if (keyPress->scancode == Keyboard::Scancode::Space) {
-                mIsFocussing = !mIsFocussing;
-                if (mIsFocussing) {
-                    if (mFocusTimer <= 0.f) {
-                    mFocusTimer = TARGET_TIME;
-                    }
-                    mStatusText.setString("FOCUSSING... (Planting Locked)");
-                    mStatusText.setFillColor(Color::Green);
-                }
-                else {
-                    mStatusText.setString("Paused");
-                    mStatusText.setFillColor(Color::Black);
-                }
-            }
-            else if (keyPress->scancode == Keyboard::Scancode::Enter) {
+            if (keyPress->scancode == Keyboard::Scancode::Enter) {
                 if (!mIsFocussing && !mIsPaused) {
-                    mWorld.interact();
+                    if (mState == GameState::INSIDE_HOUSE &&
+                        mWorld.getInterior().isComputer(mWorld.getPlayerPosition())) {
+                            mShowComputerUI = true;
+                        }
+                    else {
+                        mWorld.interact();
+                    }
                 }
             }
             else if (keyPress->scancode == Keyboard::Scancode::Escape) {
@@ -311,7 +333,7 @@ void Game::update(Time dt) {
     else if (mState == GameState::INSIDE_HOUSE) {
         if (mWorld.getInterior().isExit(mWorld.getPlayerPosition())) {
             mShowExitPrompt = true;
-            return;;
+            return;
         }
         FloatRect mapBounds = mWorld.getInterior().getBounds();
         Vector2f viewSize = mWorldView.getSize();
@@ -373,9 +395,27 @@ void Game::render() {
         mWindow.draw(dot);
         // -----------------
     }
+
     mWindow.setView(mWindow.getDefaultView());
-    mWindow.draw(mTimerText);
-    mWindow.draw(mStatusText);
+
+    if (mShowComputerUI) {
+        mWindow.draw(mMonitorFrame);
+        mWindow.draw(mMonitorScreen);
+        mWindow.draw(mComputerText);
+
+        Text computerTimer = mTimerText;
+        computerTimer.setPosition({340.f, 250.f});
+        computerTimer.setCharacterSize(60);
+        computerTimer.setFillColor(sf::Color::Green);
+        mWindow.draw(computerTimer);
+
+        Text computerStatus = mStatusText;
+        computerStatus.setPosition({320.f, 320.f});
+        computerStatus.setFillColor(sf::Color::Green); 
+        if (mIsFocussing) computerStatus.setString("SESSION ACTIVE...");
+        else computerStatus.setString("PAUSED");
+        mWindow.draw(computerStatus);
+    }
 
     if (mShowDoorPrompt || mShowExitPrompt) {
         if (mShowDoorPrompt) {
@@ -384,7 +424,7 @@ void Game::render() {
         else if (mShowExitPrompt) {
             mPromptText.setString("Leave House?\n\n[Y] Yes    [N] No");
         }
-        
+
         sf::FloatRect textBounds = mPromptText.getLocalBounds();
         mPromptText.setOrigin({textBounds.size.x / 2.f, textBounds.size.y / 2.f});
         mPromptText.setPosition({400.f, 500.f});

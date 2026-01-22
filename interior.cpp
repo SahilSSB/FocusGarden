@@ -95,7 +95,24 @@ void Interior::draw(RenderTarget& target) {
     debugExit.setOutlineColor(sf::Color::Green);
     debugExit.setOutlineThickness(1.f);
 
-    target.draw(debugExit); 
+    target.draw(debugExit);
+    
+    Vector2f computerPos = IgridToIso(10, 10); 
+
+    ConvexShape debugComputer;
+    debugComputer.setPointCount(4);
+    
+    debugComputer.setPoint(0, {0.f, 0.f});
+    debugComputer.setPoint(1, {TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
+    debugComputer.setPoint(2, {0.f, static_cast<float>(TILE_HEIGHT)});
+    debugComputer.setPoint(3, {-TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
+
+    debugComputer.setPosition(computerPos);
+    debugComputer.setFillColor(sf::Color(0, 0, 255, 100)); 
+    debugComputer.setOutlineColor(sf::Color::Blue);
+    debugComputer.setOutlineThickness(1.f);
+
+    target.draw(debugComputer);
 }
 
 Vector2f Interior::IgridToIso(int x, int y) {
@@ -148,5 +165,20 @@ bool Interior::isPositionBlocked(Vector2f worldPos) {
     if (gridX < 0 || gridX >= ROOM_WIDTH || gridY < 0 || gridY >= ROOM_HEIGHT) {
         return true;
     }
+    return false;
+}
+
+bool Interior::isComputer(Vector2f playerPos) {
+    Vector2f grid = IisoToGrid(playerPos.x, playerPos.y);
+
+    int gridX = static_cast<int>(grid.x);
+    int gridY = static_cast<int>(grid.y);
+
+     if ((gridX == 9 && gridY == 10) ||
+        (gridX == 11 && gridY == 10) ||
+        (gridX == 10 && gridY == 9) ||
+        (gridX == 10 && gridY == 11)) { 
+            return true;
+        }
     return false;
 }

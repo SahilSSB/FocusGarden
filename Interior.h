@@ -12,6 +12,7 @@ class Interior {
         bool isExit(sf::Vector2f playerPos);
         bool isBlocked(sf::Vector2f playerPos);
         bool isPositionBlocked(sf::Vector2f worldPos);
+        bool isComputer(sf::Vector2f playerPos);
         sf::Vector2f IgridToIso(int x, int y);
         sf::Vector2f IisoToGrid(float x, float y);
         sf::FloatRect getBounds();
