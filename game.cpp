@@ -40,6 +40,12 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
                         mQuitText.getLocalBounds().size.y / 2.f});
     mQuitText.setPosition({300, 320}); 
 
+    mFocusTimer = 10.f * 60.f;
+    mPomoState = PomoState::WORK;
+    mSessionsCompeleted = 0;
+
+    mComputerText.setString("SYSTEM READY\nHit [SPACE] to Start Focus");
+
     try {
         mWorld.init();
         mWorld.initInterior();
@@ -148,6 +154,19 @@ void Game::processEvents() {
                         if (mFocusTimer <= 0.f) mFocusTimer = TARGET_TIME;
                     }
                 }
+                else if ((keyPress->scancode == Keyboard::Scancode::Up || 
+                        keyPress-> scancode == Keyboard::Scancode::Right) &&
+                        !mIsFocussing) {
+                            
+                            mFocusTimer += 60.f;
+                            if (mFocusTimer > 5940.f) mFocusTimer = 5940.f;
+                        }
+                else if ((keyPress->scancode == Keyboard::Scancode::Down ||
+                        keyPress->scancode == Keyboard::Scancode::Left) &&
+                        !mIsFocussing) {
+                            mFocusTimer -= 60.f;
+                            if (mFocusTimer < 60.f) mFocusTimer = 60.f;
+                        }
             }
             continue;
         }
@@ -307,16 +326,48 @@ void Game::update(Time dt) {
         if (mFocusTimer <= 0.f) {
             mFocusTimer = 0.f;
             mIsFocussing = false;
+
+            if (mPomoState == PomoState::WORK) {
+                mSessionsCompeleted++;
+                
+                if (mSessionsCompeleted % 4 == 0) {
+                    mPomoState = PomoState::LONG_BREAK;
+                    mFocusTimer = 15 * 60.f;
+                }
+                else {
+                    mPomoState = PomoState::SHORT_BRAEK;
+                    mFocusTimer = 5.f * 60.f;
+                }
+            }
+            else {
+                mPomoState = PomoState::WORK;
+                mFocusTimer = 25.f * 60;
+            }
             mStatusText.setString("SESSION COMPLETE!");
             mWorld.finishSession();
         }
     }
+
     int minutes = static_cast<int>(mFocusTimer) / 60;
     int seconds = static_cast<int>(mFocusTimer) % 60;
-    string timeStr = to_string(minutes) + ":";
-    if (seconds < 10) timeStr += "0";
-    timeStr += to_string(seconds);
-    mTimerText.setString(timeStr);
+    string timeStr;
+    
+    string minStr = (minutes < 10 ? "0" : "") + to_string(minutes);
+    string secStr = (seconds < 10 ? "0" : "") + to_string(seconds);
+
+    string stateLabel;
+    if (mPomoState == PomoState::WORK) stateLabel = "FOCUS TASK";
+    else if (mPomoState == PomoState::SHORT_BRAEK) stateLabel = "SHORT BREAK";
+    else stateLabel = "LONG BREAK";
+
+    string status;
+    if (mIsFocussing){
+        status = "RUNNING... (SPACE TO PAUSE)";
+    }
+    else {
+        status = "[ARROWS] ADJUST TIME\n[SPACE] START";
+    }
+    mComputerText.setString(stateLabel + "\n" + minStr + ":" + secStr + "\n\n" + status);
     
     mWorld.update(dt, mIsFocussing);
 
@@ -424,7 +475,6 @@ void Game::render() {
         computerStatus.setPosition({320.f, 320.f});
         computerStatus.setFillColor(sf::Color::Green); 
         if (mIsFocussing) computerStatus.setString("SESSION ACTIVE...");
-        else computerStatus.setString("PAUSED");
         mWindow.draw(computerStatus);
     }
 

@@ -6,3 +6,9 @@ enum class GameState {
     MENU,
     INSIDE_HOUSE
 };
+
+enum class PomoState {
+    WORK,
+    SHORT_BRAEK,
+    LONG_BREAK
+};

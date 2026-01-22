@@ -42,4 +42,7 @@ class Game {
     sf::RectangleShape mMonitorFrame;
     sf::RectangleShape mMonitorScreen;
     sf::Text mComputerText;
+
+    PomoState mPomoState;
+    int mSessionsCompeleted;
 };
