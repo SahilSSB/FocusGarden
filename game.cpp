@@ -43,6 +43,7 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
     mFocusTimer = 10.f * 60.f;
     mPomoState = PomoState::WORK;
     mSessionsCompeleted = 0;
+    mTimeSinceInput = 0.f;
 
     mComputerText.setString("SYSTEM READY\nHit [SPACE] to Start Focus");
 
@@ -130,9 +131,25 @@ void Game::run() {
 
 void Game::processEvents() {
     while (const auto event = mWindow.pollEvent()) {
+
+        bool inputDetected = false;
+
         if (event->is<Event::Closed>()) {
             mWorld.save("garden.dat");
             mWindow.close();
+        }
+
+        if (event->is<Event::KeyPressed>() ||
+            event->is<Event::MouseButtonPressed>()) {
+            inputDetected = true;
+        }
+
+        if (inputDetected) {
+            if (mTimeSinceInput > IDLE_THRESHOLD) {
+                mTimeSinceInput = 0.f;
+                continue;
+            }
+            mTimeSinceInput = 0.f;
         }
 
         if (mShowComputerUI) {
@@ -322,6 +339,7 @@ void Game::update(Time dt) {
         return;
     }
     if (mIsFocussing) {
+        mTimeSinceInput += dt.asSeconds();
         mFocusTimer -= dt.asSeconds();
         if (mFocusTimer <= 0.f) {
             mFocusTimer = 0.f;
@@ -335,7 +353,7 @@ void Game::update(Time dt) {
                     mFocusTimer = 15 * 60.f;
                 }
                 else {
-                    mPomoState = PomoState::SHORT_BRAEK;
+                    mPomoState = PomoState::SHORT_BREAK;
                     mFocusTimer = 5.f * 60.f;
                 }
             }
@@ -357,7 +375,7 @@ void Game::update(Time dt) {
 
     string stateLabel;
     if (mPomoState == PomoState::WORK) stateLabel = "FOCUS TASK";
-    else if (mPomoState == PomoState::SHORT_BRAEK) stateLabel = "SHORT BREAK";
+    else if (mPomoState == PomoState::SHORT_BREAK) stateLabel = "SHORT BREAK";
     else stateLabel = "LONG BREAK";
 
     string status;
@@ -441,29 +459,90 @@ void Game::render() {
     }
     else if (mState == GameState::INSIDE_HOUSE) {
         mWindow.clear(sf::Color::Black);
-        mWorld.getInterior().draw(
-            mWindow,
-            mWorld.getPlayerPosition().y,
-            [&]() { mWorld.drawPlayer(mWindow); 
-            });
-        
-        //mWorld.drawPlayer(mWindow);
 
-        // --- DEBUG DOT ---
-        CircleShape dot(3);
-        dot.setFillColor(sf::Color::Red);
-        dot.setOrigin({3, 3});
-        dot.setPosition(mWorld.getPlayerPosition());
-        mWindow.draw(dot);
-        // -----------------
+        if (!mShowComputerUI) {
+            mWorld.getInterior().draw(
+                mWindow,
+                mWorld.getPlayerPosition().y,
+                [&]() { mWorld.drawPlayer(mWindow); 
+                });
+            //mWorld.drawPlayer(mWindow);
+
+            // --- DEBUG DOT ---
+            CircleShape dot(3);
+            dot.setFillColor(sf::Color::Red);
+            dot.setOrigin({3, 3});
+            dot.setPosition(mWorld.getPlayerPosition());
+            mWindow.draw(dot);
+            // -----------------
+        }
     }
 
     mWindow.setView(mWindow.getDefaultView());
 
     if (mShowComputerUI) {
-        mWindow.draw(mMonitorFrame);
-        mWindow.draw(mMonitorScreen);
-        mWindow.draw(mComputerText);
+        float alpha = 255.f;
+        float backgroundAlpha = 0.f;
+        
+        if (mTimeSinceInput > IDLE_THRESHOLD) {
+            View savedView = mWorldView;
+            Vector2u winSize = mWindow.getSize();
+
+            float w = static_cast<float>(winSize.x);
+            float h = static_cast<float>(winSize.y);
+
+            FloatRect gardenBounds = mWorld.getBounds();
+            float desiredZoom = gardenBounds.size.y / (w / 2.f);
+
+            if (desiredZoom <= 0.f) desiredZoom = 1.0f;
+            
+            mWorldView.setSize({w * desiredZoom, h * desiredZoom});
+            mWorldView.setCenter(gardenBounds.getCenter());
+            
+            mWindow.setView(mWorldView);
+            mWindow.clear(sf::Color(135, 206, 235));
+            mWorld.draw(mWindow);
+            mWorldView = savedView;
+            mWindow.setView(mWindow.getDefaultView());
+
+            float fadeTime = 2.f;
+            float progress = (mTimeSinceInput - IDLE_THRESHOLD) / fadeTime;
+            if (progress > 1.f) progress = 1.f;
+
+            alpha = 255.f * (1.f - progress);
+            backgroundAlpha = 255.f * progress;
+
+            RectangleShape gardenOverlay({4000.f, 2000.f});
+            gardenOverlay.setFillColor(Color(0, 0, 0, static_cast<uint8_t>(255 - backgroundAlpha)));
+            mWindow.draw(gardenOverlay);
+        }
+        else {
+            RectangleShape fullScreenBg({4000.f, 2000.f});
+            fullScreenBg.setFillColor(Color::Black);
+            mWindow.draw(fullScreenBg);
+        }
+
+        if (alpha > 1.f) {
+            sf::Color frameCol = mMonitorFrame.getFillColor();
+            sf::Color screenCol = mMonitorScreen.getFillColor();
+            sf::Color textCol = mComputerText.getFillColor();
+            sf::Color outlineCol = mMonitorFrame.getOutlineColor();
+
+            mMonitorFrame.setFillColor({frameCol.r, frameCol.g, frameCol.b, static_cast<uint8_t>(alpha)});
+            mMonitorFrame.setOutlineColor({outlineCol.r, outlineCol.g, outlineCol.b, static_cast<uint8_t>(alpha)});
+            mMonitorScreen.setFillColor({screenCol.r, screenCol.g, screenCol.b, static_cast<uint8_t>(alpha)});
+            mComputerText.setFillColor({textCol.r, textCol.g, textCol.b, static_cast<uint8_t>(alpha)});
+
+            mWindow.draw(mMonitorFrame);
+            mWindow.draw(mMonitorScreen);
+            mWindow.draw(mComputerText);
+
+            mMonitorFrame.setFillColor({frameCol.r, frameCol.g, frameCol.b, 255});
+            mMonitorFrame.setOutlineColor({outlineCol.r, outlineCol.g, outlineCol.b, 255});
+            mMonitorScreen.setFillColor({screenCol.r, screenCol.g, screenCol.b, 255});
+            mComputerText.setFillColor({textCol.r, textCol.g, textCol.b, 255});
+
+        }
 
         Text computerTimer = mTimerText;
         computerTimer.setPosition({340.f, 250.f});

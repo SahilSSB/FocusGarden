@@ -45,4 +45,10 @@ class Game {
 
     PomoState mPomoState;
     int mSessionsCompeleted;
+    float mTimeSinceInput;
+    static constexpr float IDLE_THRESHOLD = 5.f;
+
+    float getSessionProgress() const { return mSessionProgress; }
+    bool isFocussingSession() const { return mIsFocussing; }
+    float mSessionProgress = 0.f;
 };

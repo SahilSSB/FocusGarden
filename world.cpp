@@ -63,15 +63,15 @@ void World::init() {
         throw runtime_error("Failed to load water texture. Is it in the correct folder?");
    }
 
-   if (!mFenceTexture.loadFromFile("textures/house /fence1.png")) {
+   if (!mFenceTexture.loadFromFile("textures/house/fence1.png")) {
        throw runtime_error("Failed to load fens texture. Is it in the correct folder?");
     }
 
-   if (!mFenceTexture1.loadFromFile("textures/house /fence2.png")) {
+   if (!mFenceTexture1.loadFromFile("textures/house/fence2.png")) {
        throw runtime_error("Failed to load fens texture. Is it in the correct folder?");
     }
 
-    if (!mHouseTexture.loadFromFile("textures/house /house.png")) {
+    if (!mHouseTexture.loadFromFile("textures/house/house.png")) {
         throw runtime_error("Failed to load house texture. Is it in the correct folder?");
     }
     mHouseSprite.setTexture(mHouseTexture);

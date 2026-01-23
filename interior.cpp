@@ -6,22 +6,22 @@ using namespace std;
 
 Interior::Interior() : mComputerSprite(mComputerTexture) {}
 void Interior::init() {
-    if (!mFloorTexture.loadFromFile("textures/house /house_tile.png")) {
+    if (!mFloorTexture.loadFromFile("textures/house/house_tile.png")) {
         Image img;
         img.resize({32, 32}, Color(139, 69, 19));
         if (!mFloorTexture.loadFromImage(img)) {
             cerr << "Failed to load fallback texture" << endl;
         }
     }
-    if (!mComputerTexture.loadFromFile("textures/house /computer_table.png")) {
+    if (!mComputerTexture.loadFromFile("textures/house/computer_table.png")) {
         throw runtime_error("Failed to load computer texture");
     }
     mComputerSprite.setTexture(mComputerTexture, true);
     FloatRect bounds = mComputerSprite.getLocalBounds();
     mComputerSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y}); 
     sf::Vector2f tilePos = IgridToIso(0, 5);
-    mComputerSprite.setScale({0.3f, 0.3f});
-    mComputerSprite.setPosition({tilePos.x, tilePos.y + (TILE_HEIGHT / 2.f) + 10.f});
+    mComputerSprite.setScale({0.375f, 0.375f});
+    mComputerSprite.setPosition({tilePos.x + 15.f, tilePos.y + (TILE_HEIGHT / 2.f) + 10.f});
 
     generateWalls();
 

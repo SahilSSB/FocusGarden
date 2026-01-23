@@ -9,6 +9,6 @@ enum class GameState {
 
 enum class PomoState {
     WORK,
-    SHORT_BRAEK,
+    SHORT_BREAK,
     LONG_BREAK
 };
