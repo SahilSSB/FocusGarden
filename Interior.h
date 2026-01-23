@@ -2,6 +2,9 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include "tile.h"
+#include <map>
+#include <memory>
+#include <string>
 using namespace std;
 
 class Interior {
@@ -17,10 +20,12 @@ class Interior {
         sf::Vector2f IisoToGrid(float x, float y);
         sf::FloatRect getBounds();
         void generateWalls();
+        void loadTextures();
+        void addObject(const string& name, int x, int y, bool flip = false);
     
     private:
-        const int ROOM_WIDTH = 20;
-        const int ROOM_HEIGHT = 20;
+        const int ROOM_WIDTH = 15;
+        const int ROOM_HEIGHT = 15;
         const int TILE_WIDTH = 32.f;
         const int TILE_HEIGHT = 16.f;
         const int TILE_DEPTH = 5.f;
@@ -39,4 +44,6 @@ class Interior {
         sf::Texture mRightWallTexture;
         sf::Texture mLeftWallTexture;
         vector<sf::Sprite> mWallSprites;
+        map<string, sf::Texture> mInteriorTexture;
+        vector<sf::Sprite> mRoomObjects;
 };

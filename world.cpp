@@ -580,7 +580,7 @@ void World::toggleTree(int x, int y) {
             cout << "Blocked\n";
             return;
         }
-        if (mGrid[index].hasTree && mGrid[index].growthState >= 1.f) {
+        if (mGrid[index].hasTree && mGrid[index].growthState >= 0.6f) {
             return;
         }
         if (x == mActiveSapling.x && y == mActiveSapling.y) {

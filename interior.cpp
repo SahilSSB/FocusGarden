@@ -13,15 +13,36 @@ void Interior::init() {
             cerr << "Failed to load fallback texture" << endl;
         }
     }
+    
+    loadTextures();
+
     if (!mComputerTexture.loadFromFile("textures/house/computer_table.png")) {
         throw runtime_error("Failed to load computer texture");
     }
     mComputerSprite.setTexture(mComputerTexture, true);
     FloatRect bounds = mComputerSprite.getLocalBounds();
-    mComputerSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y}); 
-    sf::Vector2f tilePos = IgridToIso(0, 5);
+    mComputerSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y});
+    sf::Vector2f tilePos = IgridToIso(0, 1);
     mComputerSprite.setScale({0.375f, 0.375f});
-    mComputerSprite.setPosition({tilePos.x + 15.f, tilePos.y + (TILE_HEIGHT / 2.f) + 10.f});
+    mComputerSprite.setPosition({tilePos.x + 0.f, tilePos.y + (TILE_HEIGHT / 2.f) + 25.f});
+
+    addObject("shelf", 11, 0);
+    addObject("shelf", 14, 0);
+    addObject("photoframe", 7, 0);
+    addObject("bookshelf", 0, 10);
+    addObject("plant", 1, 6);
+    addObject("plant", 5, 1);
+    addObject("carpet", 6, 11);
+    addObject("sofaset", 6, 8);
+    addObject("lamp", 5, 0);
+    addObject("fire", 0, 8);
+    addObject("diningtable", 13, 5);
+    addObject("bed", 6, 0);
+    addObject("sink", 13, 0);
+    addObject("dishwasher", 11, 0);
+    addObject("tablelamp", 9, 0);
+    addObject("smallphoto", 0, 1);
+    addObject("hanger", 3, 0);
 
     generateWalls();
 
@@ -91,11 +112,113 @@ void Interior::init() {
     }
 }
 
+void Interior::loadTextures() {
+    auto load = [&](string name, string path) {
+        Image img;
+        if (img.loadFromFile(path)) {
+            Texture tex;
+            tex.loadFromImage(img);
+            mInteriorTexture[name] = tex;
+        }
+        else {
+            cerr << "Failed to load: " << name << endl;
+        }
+    };
+    load("shelf", "textures/house/shelf.png");
+    load("photoframe", "textures/house/photoframe.png");
+    load("bookshelf", "textures/house/bookshelf.png");
+    load("carpet", "textures/house/carpet.png");
+    load("lamp", "textures/house/lamp.png");
+    load("sofaset", "textures/house/sofaset.png");
+    load("plant", "textures/house/plant.png");
+    load("fire", "textures/house/fire.png");
+    load("diningtable", "textures/house/diningtable.png");
+    load("bed", "textures/house/bed.png");
+    load("sink", "textures/house/sink.png");
+    load("tablelamp", "textures/house/tablelamp.png");
+    load("dishwasher", "textures/house/dishwasher.png");
+    load("smallphoto", "textures/house/smallphoto.png");
+    load("hanger", "textures/house/decor_1.png");
+}
+
+void Interior::addObject(const string& name, int gridX, int gridY, bool flip) {
+    if (mInteriorTexture.count(name)) {
+        Sprite s(mInteriorTexture[name]);
+        s.setPosition(IgridToIso(gridX, gridY));
+        FloatRect b = s.getLocalBounds();
+        s.setOrigin({b.size.x / 2.f, b.size.y});
+        float scale = 0.375f;
+        float scaleX = -scale;
+        if (name == "shelf") {
+            flip = true;
+            s.move({0.f, -35.f});
+        }
+        if (name == "photoframe") {
+            s.move({0.f, -25.f});
+        }
+        if (name == "sofaset") {
+            flip = true;
+        }
+        if (name == "carpet") {
+            flip = true;
+        }
+        if (name == "bookshelf") {
+            flip = true;
+            s.move({0.f, 20.f});
+        }
+        if (name == "lamp") {
+            s.setScale({scale + 0.35f, scale + 0.35f});
+            s.move({2.f, 15.f});
+        }
+        if (name == "fire") {
+            flip = true;
+            s.move({5.f, 17.f});
+        }
+        if (name == "diningtable") {
+            flip = true;
+             s.move({0.f, -5.f});
+        }
+        if (name == "bed") {
+            flip = true;
+            s.move({-5.f, 35.f});
+        }
+        if (name == "sink") {
+            flip = true;
+            s.move({-20.f, 10.f});
+        }
+        if (name == "dishwasher") {
+            flip = true;
+            s.move({-17.f, 3.5f});
+        }
+        if (name == "tablelamp") {
+            flip = true;
+            s.move({-5.f, 9.f});
+        }
+        if (name == "smallphoto") {
+            s.move({-20.f, -30.f});
+        }
+        if (name == "hanger") {
+            flip = true;
+            s.move({0.f, -25.f});
+        }
+        if (flip) scaleX = scale;
+        s.setScale({scaleX, scale});
+        mRoomObjects.push_back(s);
+    }
+}
+
 void Interior::draw(RenderTarget& target, float playerY, function<void()> drawPlayerFunc) {
     target.draw(mMesh, &mFloorTexture);
     target.draw(mWallMesh);
 
     vector<pair<float, function<void()>>> renderQueue;
+
+    for (const auto& prop : mRoomObjects) {
+        renderQueue.push_back({ 
+            prop.getPosition().y, 
+            [&prop, &target]() { target.draw(prop); } 
+        });
+    }
 
     renderQueue.push_back({
         mComputerSprite.getPosition().y,
@@ -115,7 +238,6 @@ void Interior::draw(RenderTarget& target, float playerY, function<void()> drawPl
         item.second();
     }
     // DEBUG: Draw the Exit Tile
-    sf::Vector2f pos = IgridToIso(9, 19);
 
     sf::ConvexShape debugExit;
     debugExit.setPointCount(4);
@@ -126,14 +248,19 @@ void Interior::draw(RenderTarget& target, float playerY, function<void()> drawPl
     debugExit.setPoint(2, {0.f, static_cast<float>(TILE_HEIGHT)});   // <--- Fixed line
     debugExit.setPoint(3, {-TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
 
-    debugExit.setPosition(pos);
     debugExit.setFillColor(sf::Color(0, 255, 0, 100)); 
     debugExit.setOutlineColor(sf::Color::Green);
     debugExit.setOutlineThickness(1.f);
 
+    sf::Vector2f pos = IgridToIso(13, 14);
+    debugExit.setPosition(pos);
+    target.draw(debugExit);
+
+    sf::Vector2f pos2 = IgridToIso(12,14);
+    debugExit.setPosition(pos2);
     target.draw(debugExit);
     
-    /*Vector2f computerPos = IgridToIso(0, 5); 
+    /*Vector2f computerPos = IgridToIso(5, 0); 
 
     ConvexShape debugComputer;
     debugComputer.setPointCount(4);
@@ -173,7 +300,7 @@ Vector2f Interior::IisoToGrid(float x, float y) {
 bool Interior::isExit(Vector2f playerPos) {
     Vector2f grid = IisoToGrid(playerPos.x, playerPos.y);
 
-    if (grid.x == 9 && grid.y == 19) {
+    if ((grid.x == 12 || grid.x == 13) && grid.y == 14) {
         return true;
     }
     return false;
@@ -213,9 +340,9 @@ bool Interior::isComputer(Vector2f playerPos) {
     int gridX = static_cast<int>(grid.x);
     int gridY = static_cast<int>(grid.y);
 
-     if (gridX == 1 && gridY == 5 ||
-        gridX == 1 && gridY == 6 ||
-        gridX == 1 && gridY == 4) {
+     if (gridX == 1 && gridY == 2 ||
+        gridX == 2 && gridY == 2||
+        gridX == 2 && gridY == 3) {
             return true;
         }
     return false;
@@ -249,8 +376,8 @@ void Interior::generateWalls() {
     };
     
     Vector2f backCorner = IgridToIso(0, 0);
-    Vector2f leftEnd = IgridToIso(0, 20);
-    Vector2f rightEnd = IgridToIso(20, 0);
+    Vector2f leftEnd = IgridToIso(0, 15);
+    Vector2f rightEnd = IgridToIso(15, 0);
 
     float yOffset = 0.f;
     backCorner.y += yOffset;

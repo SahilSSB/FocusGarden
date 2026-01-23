@@ -157,6 +157,7 @@ void Game::processEvents() {
 
                 if (keyPress->scancode == Keyboard::Scancode::Escape) {
                     mShowComputerUI = false;
+                    mIsFocussing = false;
                     Vector2u winSize = mWindow.getSize();
                     float w = static_cast<float>(winSize.x);
                     float h = static_cast<float>(winSize.y);
@@ -194,7 +195,7 @@ void Game::processEvents() {
                         
                         mShowDoorPrompt = false;
                         mState = GameState::INSIDE_HOUSE;
-                        mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(10, 19));
+                        mWorld.setPlayerPosition(mWorld.getInterior().IgridToIso(13, 13));
                         mWorld.disablePlayerCollision();
                         Vector2u winSize = mWindow.getSize();
                         float w = static_cast<float>(winSize.x);
@@ -451,6 +452,7 @@ void Game::update(Time dt) {
 }
 
 void Game::render() {
+    
     mWindow.clear(sf::Color(135, 206, 235));
     mWindow.setView(mWorldView);
 
