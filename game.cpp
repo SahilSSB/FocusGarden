@@ -16,7 +16,8 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mResumeText(mFont),
         mQuitText(mFont),
         mPromptText(mFont),
-        mComputerText(mFont)
+        mComputerText(mFont),
+        mEditModeText(mFont)
 {
     mWindow.setFramerateLimit(60);
     ContextSettings settings;
@@ -47,6 +48,13 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
 
     mComputerText.setString("SYSTEM READY\nHit [SPACE] to Start Focus");
 
+    mEditModeText.setString("LEVEL EDITOR");
+    mEditModeText.setCharacterSize(40);
+    mEditModeText.setFillColor(Color::White);
+    sf::FloatRect eBounds = mEditModeText.getLocalBounds();
+    mEditModeText.setOrigin({eBounds.size.x / 2.f, eBounds.size.y / 2.f});
+    mEditModeText.setPosition({400.f, 270.f});
+
     try {
         mWorld.init();
         mWorld.initInterior();
@@ -54,7 +62,29 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mWorld.load("garden.dat");
 
         mWorld.getPlayer().setCollissionCallback([this](Vector2f pos) {
-            return mWorld.isPositionBlocked(pos, mState);
+            GameState state;
+            if (state == GameState::INSIDE_HOUSE) {
+            float width = 20.f;
+            float depth = 12.f;
+
+            float halfW = width / 2.f;
+            float halfH = depth / 2.f;
+
+            Vector2f corners[4] {
+                { pos.x - halfW, pos.y - halfH },
+                { pos.x + halfW, pos.y - halfH },
+                { pos.x - halfW, pos.y + halfH },
+                { pos.x + halfW, pos.y + halfH }
+            };
+            
+            for (const auto& point : corners) {
+                if (mWorld.isPositionBlocked(point, mState)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+             return mWorld.isPositionBlocked(pos, mState);
         });
 
         if (!mFont.openFromFile("fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf")) {
@@ -286,6 +316,12 @@ void Game::processEvents() {
                     
                     if (mResumeText.getGlobalBounds().contains(worldPos)) {
                         mIsPaused = false;
+                        mIsEditing = false;
+                    }
+                    else if (mEditModeText.getGlobalBounds().contains(worldPos)) {
+                        mIsPaused = false;
+                        mIsEditing = true;
+                        cout << "Editing mode ON" << endl;
                     }
                     else if (mQuitText.getGlobalBounds().contains(worldPos)) {
                         mWorld.save("garden.dat");
@@ -297,6 +333,10 @@ void Game::processEvents() {
                     Vector2i gridPos = mWorld.isoToGrid(worldPos.x, worldPos.y);
                     mWorld.toggleTree(gridPos.x, gridPos.y);
                     }
+                }
+                if (mIsEditing) {
+                    bool handled = mWorld.getInterior().handleEditorInput(mWindow, mWorldView, *event);
+                    if (handled) return;
                 }
             }
         }
@@ -326,7 +366,13 @@ void Game::processEvents() {
                 }
             }
             else if (keyPress->scancode == Keyboard::Scancode::Escape) {
+                if (mIsEditing) {
+                    mIsEditing = false;
+                    cout << "Editing mode OFF" << endl;
+                }
+                else {
                 mIsPaused = !mIsPaused;
+                }
             }
         }
     }
@@ -408,6 +454,9 @@ void Game::update(Time dt) {
         }
     }
     else if (mState == GameState::INSIDE_HOUSE) {
+        if (mIsEditing) {
+            mWorld.getInterior().updateEditor(mWindow, mWorldView);
+        }
         if (mWorld.getInterior().isExit(mWorld.getPlayerPosition())) {
             mShowExitPrompt = true;
             return;
@@ -463,11 +512,26 @@ void Game::render() {
         mWindow.clear(sf::Color::Black);
 
         if (!mShowComputerUI) {
+            Vector2f playerPos = mWorld.getPlayerPosition();
             mWorld.getInterior().draw(
                 mWindow,
-                mWorld.getPlayerPosition().y,
-                [&]() { mWorld.drawPlayer(mWindow); 
-                });
+                playerPos,
+                [&]() { 
+                    mWorld.drawPlayer(mWindow);
+                    float w = 20.f;
+                    float h = 12.f;
+                    Vector2f pos = mWorld.getPlayerPosition();
+
+                    RectangleShape box({w, h});
+                    box.setOrigin({w / 2.f, h / 2.f});
+                    box.setPosition(pos);
+                    box.setFillColor(Color::Transparent);
+                    box.setOutlineColor(Color::Yellow);
+                    box.setOutlineThickness(1.f);
+                    mWindow.draw(box);
+                },
+                mIsEditing
+                );
             //mWorld.drawPlayer(mWindow);
 
             // --- DEBUG DOT ---
@@ -578,6 +642,7 @@ void Game::render() {
     if  (mIsPaused) {
         mWindow.draw(mMenuBackrgound);
         mWindow.draw(mResumeText);
+        mWindow.draw(mEditModeText);
         mWindow.draw(mQuitText);
     }
 

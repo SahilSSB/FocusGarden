@@ -5,13 +5,14 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <fstream>
 using namespace std;
 
 class Interior {
     public:
         Interior();
         void init();
-        void draw(sf::RenderTarget& target, float playerY, function<void()> drawPlayerFunc);
+        void draw(sf::RenderTarget& target, sf::Vector2f playerWorldPos, function<void()> drawPlayerFunc, bool isEditing);
         bool isExit(sf::Vector2f playerPos);
         bool isBlocked(sf::Vector2f playerPos);
         bool isPositionBlocked(sf::Vector2f worldPos);
@@ -21,7 +22,17 @@ class Interior {
         sf::FloatRect getBounds();
         void generateWalls();
         void loadTextures();
-        void addObject(const string& name, int x, int y, bool flip = false);
+        
+        void updateEditor(sf::RenderWindow& window, sf::View& view);
+        bool handleEditorInput(sf::RenderWindow& window, sf::View& view, const sf::Event& event);
+        void saveFurnitureLayout();
+        void defineFurniture();
+        void addObject(const string& name, int x, int y);
+        void addBlock(int x, int y, int w, int h);
+        void rebuildCollisions();
+        void loadFurnitureLayout();
+        void deselectAndRefresh();
+
     
     private:
         const int ROOM_WIDTH = 15;
@@ -46,4 +57,10 @@ class Interior {
         vector<sf::Sprite> mWallSprites;
         map<string, sf::Texture> mInteriorTexture;
         vector<sf::Sprite> mRoomObjects;
+        vector<sf::Vector2i> mDebugBlockedTiles;
+
+        map<string, Furniture> mFurnitureDef;
+        vector<PlacedFurniture> mPlacedObjects;
+        PlacedFurniture* mSelectedObject = nullptr;
+        vector<sf::Vector2i> mBlockedTiles;
 };

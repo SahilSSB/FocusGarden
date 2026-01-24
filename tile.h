@@ -12,3 +12,18 @@ struct Tile {
     bool isSolid = false;
     float growthState = 0.0f;
 };
+
+struct Furniture {
+    std::string name;
+    std::vector<sf::Vector2i> footprint;
+    sf::Vector2f visualOffset;
+    bool defaultFlip;
+};
+
+struct PlacedFurniture {
+    std::string name;
+    int gridX;
+    int gridY;
+    sf::Sprite sprite;
+    bool isBeingDragged = false;
+};

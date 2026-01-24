@@ -51,4 +51,7 @@ class Game {
     float getSessionProgress() const { return mSessionProgress; }
     bool isFocussingSession() const { return mIsFocussing; }
     float mSessionProgress = 0.f;
+
+    sf::Text mEditModeText;
+    bool mIsEditing = false;
 };

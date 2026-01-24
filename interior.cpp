@@ -1,10 +1,191 @@
 #include "Interior.h"
 #include <iostream>
 #include <SFML/Graphics.hpp>
+#include <cmath>
 using namespace sf;
 using namespace std;
 
 Interior::Interior() : mComputerSprite(mComputerTexture) {}
+
+void Interior::defineFurniture() {
+
+mFurnitureDef["sofaset"] = { 
+        "sofaset", 
+        { {-2,-2}, {-3,-2}, {-4,-2}, {-5,-2}, {0,-2}, {-1, -2} }, 
+        {0.f, 0.f}, 
+        true
+    };
+
+    mFurnitureDef["bed"] = { 
+        "bed", 
+        { {0,0}, {1,0}, {0,1}, {1,1}, {0,2}, {1,2} }, 
+        {-5.f, 35.f}, 
+        true
+    };
+
+    mFurnitureDef["diningtable"] = { 
+        "diningtable", 
+        { {-2,-2}, {-1,-2}, {-2,-1}, {-1,-1} }, 
+        {0.f, -5.f}, 
+        true
+    };
+
+    mFurnitureDef["fire"] =       { "fire",       { {0,0}, {0,1}, {0,2}, {0, -2}, {0, -1} }, {5.f, 17.f}, true};
+    mFurnitureDef["bookshelf"] =  { "bookshelf",  { {0,0} },               {0.f, 10.f}, true};
+    mFurnitureDef["sink"] =       { "sink",       { {0,0}, {-2,0}, {-1,0}, {-3,0} },               {-20.f, 10.f}, true};
+    mFurnitureDef["dishwasher"] = { "dishwasher", { {0,0}, {-1,0}, {-2,0}, {-3,0} },               {-17.f, 3.5f}, true};
+    
+    mFurnitureDef["lamp"] =       { "lamp",       { {0,0} },               {2.f, 15.f}, true};
+
+    mFurnitureDef["carpet"] =     { "carpet",     {}, {0.f, 0.f}, true};
+    mFurnitureDef["shelf"] =      { "shelf",      {}, {0.f, -35.f}, true};
+    mFurnitureDef["hanger"] =     { "hanger",     {}, {0.f, -25.f}, true};
+    mFurnitureDef["photoframe"] = { "photoframe", {}, {0.f, -25.f}, false};
+    mFurnitureDef["smallphoto"] = { "smallphoto", {}, {-20.f, -30.f}, false};
+    mFurnitureDef["tablelamp"] =  { "tablelamp",  {}, {-5.f, 9.f}, true};
+}    
+
+void Interior::addObject(const string& name, int gridX, int gridY) {
+    if (mInteriorTexture.count(name) == 0) return;
+
+    Furniture def;
+    if (mFurnitureDef.count(name)) def = mFurnitureDef[name];
+    else def = { name, {}, {0.f, 0.f}, false};
+
+    Sprite s(mInteriorTexture[name]);
+
+    Vector2f isoPos = IgridToIso(gridX, gridY);
+    isoPos.y += TILE_HEIGHT / 2.f;
+    s.setPosition(isoPos);
+
+    float scale = 0.375f;
+    if (name == "lamp") scale += 0.375f;
+
+    float scaleX = def.defaultFlip ? scale : -scale;
+    s.setScale({scaleX, scale});
+
+    FloatRect b = s.getLocalBounds();
+    s.setOrigin({b.size.x / 2.f, b.size.y});
+    Vector2f currentOrigin = s.getOrigin();
+    currentOrigin.x -= (def.visualOffset.x / s.getScale().x);
+    currentOrigin.y -= (def.visualOffset.y / s.getScale().y);
+    s.setOrigin(currentOrigin);
+
+    PlacedFurniture obj = {name, gridX, gridY, s, false};
+    mPlacedObjects.push_back(obj);
+
+}
+
+void Interior::rebuildCollisions() {
+    mBlockedTiles.clear();
+
+    mBlockedTiles.push_back({0, 1});
+    mBlockedTiles.push_back({1, 1});
+
+    for (const auto& obj : mPlacedObjects) {
+        if (obj.isBeingDragged) continue;
+
+        if (mFurnitureDef.count(obj.name)) {
+            const auto& def = mFurnitureDef[obj.name];
+            
+            for (const auto& offset : def.footprint) {
+                mBlockedTiles.push_back({obj.gridX + offset.x, obj.gridY + offset.y});
+            }
+        }
+    }
+}
+
+void Interior::updateEditor(RenderWindow& window, View& view) {
+    if (mSelectedObject) {
+        Vector2i pixelPos = Mouse::getPosition(window);
+        Vector2f worldPos = window.mapPixelToCoords(pixelPos, view);
+        Vector2f gridPosF = IisoToGrid(worldPos.x, worldPos.y);
+
+        int gx = static_cast<int>(round(gridPosF.x));
+        int gy = static_cast<int>(round(gridPosF.y));
+
+        mSelectedObject->gridX = gx;
+        mSelectedObject->gridY = gy;
+        Vector2f isoPos = IgridToIso(gx, gy);
+        isoPos.y += TILE_HEIGHT / 2.f;
+
+        if (mFurnitureDef.count(mSelectedObject->name)) {
+            const auto& def = mFurnitureDef.at(mSelectedObject->name);
+            Vector2f adjustedOrigin = mSelectedObject->sprite.getOrigin();
+            adjustedOrigin.x = mSelectedObject->sprite.getLocalBounds().size.x / 2.f;
+            adjustedOrigin.y = mSelectedObject->sprite.getLocalBounds().size.y;
+            adjustedOrigin.x -= (def.visualOffset.x / mSelectedObject->sprite.getScale().x);
+            adjustedOrigin.y -= (def.visualOffset.y / mSelectedObject->sprite.getScale().y);
+            mSelectedObject->sprite.setOrigin(adjustedOrigin);
+        }
+        mSelectedObject->sprite.setPosition(isoPos);
+    }
+}
+
+bool Interior::handleEditorInput(RenderWindow& window, View& view, const Event& event) {
+    if (event.is<Event::MouseButtonPressed>()) {
+        const auto* mousePress = event.getIf<Event::MouseButtonPressed>();
+        if (mousePress->button == Mouse::Button::Left) {
+            Vector2i pixelPos = mousePress->position;
+            Vector2f worldPos = window.mapPixelToCoords(pixelPos, view);
+
+            if (mSelectedObject) {
+                deselectAndRefresh();
+                return true;
+            }
+            for (int i = mPlacedObjects.size() - 1; i >= 0; i--) {
+                if (mPlacedObjects[i].sprite.getGlobalBounds().contains(worldPos)) {
+                    mSelectedObject = &mPlacedObjects[i];
+                    mSelectedObject->isBeingDragged = true;
+                    mSelectedObject->sprite.setColor(Color(255, 255, 255, 150));
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+void Interior::saveFurnitureLayout() {
+    ofstream file("furniture_layout.txt");
+    if (file.is_open()) {
+        for (const auto& obj : mPlacedObjects) {
+            file << obj.name << " " << obj.gridX << " " << obj.gridY << "\n";
+        }
+        cout << "Layout Saved!" << endl;
+    }
+}
+
+void Interior::loadFurnitureLayout() {
+    ifstream file("furniture_layout.txt");
+    mPlacedObjects.clear(); 
+    
+    if (file.is_open()) {
+        string name;
+        int x, y;
+        while (file >> name >> x >> y) {
+            addObject(name, x, y);
+        }
+        cout << "Layout Loaded!" << endl;
+    } else {
+        addObject("bed", 6, 0);
+        addObject("sofaset", 6, 8);
+        addObject("diningtable", 13, 5);
+        addObject("shelf", 11, 0);
+        addObject("bookshelf", 0, 10);
+        addObject("lamp", 5, 0);
+        addObject("fire", 0, 8);
+        addObject("sink", 13, 0);
+        addObject("dishwasher", 11, 0);
+        addObject("carpet", 6, 11);
+        addObject("smallphoto", -1, 0);
+        addObject("photoframe", 7, 0);
+        addObject("tablelamp", 9, 0);
+        addObject("plant", 5, 1);
+    }
+    rebuildCollisions();
+}
+
 void Interior::init() {
     if (!mFloorTexture.loadFromFile("textures/house/house_tile.png")) {
         Image img;
@@ -13,7 +194,9 @@ void Interior::init() {
             cerr << "Failed to load fallback texture" << endl;
         }
     }
-    
+    defineFurniture();
+    loadFurnitureLayout();
+    generateWalls();
     loadTextures();
 
     if (!mComputerTexture.loadFromFile("textures/house/computer_table.png")) {
@@ -25,24 +208,6 @@ void Interior::init() {
     sf::Vector2f tilePos = IgridToIso(0, 1);
     mComputerSprite.setScale({0.375f, 0.375f});
     mComputerSprite.setPosition({tilePos.x + 0.f, tilePos.y + (TILE_HEIGHT / 2.f) + 25.f});
-
-    addObject("shelf", 11, 0);
-    addObject("shelf", 14, 0);
-    addObject("photoframe", 7, 0);
-    addObject("bookshelf", 0, 10);
-    addObject("plant", 1, 6);
-    addObject("plant", 5, 1);
-    addObject("carpet", 6, 11);
-    addObject("sofaset", 6, 8);
-    addObject("lamp", 5, 0);
-    addObject("fire", 0, 8);
-    addObject("diningtable", 13, 5);
-    addObject("bed", 6, 0);
-    addObject("sink", 13, 0);
-    addObject("dishwasher", 11, 0);
-    addObject("tablelamp", 9, 0);
-    addObject("smallphoto", 0, 1);
-    addObject("hanger", 3, 0);
 
     generateWalls();
 
@@ -141,82 +306,52 @@ void Interior::loadTextures() {
     load("hanger", "textures/house/decor_1.png");
 }
 
-void Interior::addObject(const string& name, int gridX, int gridY, bool flip) {
-    if (mInteriorTexture.count(name)) {
-        Sprite s(mInteriorTexture[name]);
-        s.setPosition(IgridToIso(gridX, gridY));
-        FloatRect b = s.getLocalBounds();
-        s.setOrigin({b.size.x / 2.f, b.size.y});
-        float scale = 0.375f;
-        float scaleX = -scale;
-        if (name == "shelf") {
-            flip = true;
-            s.move({0.f, -35.f});
-        }
-        if (name == "photoframe") {
-            s.move({0.f, -25.f});
-        }
-        if (name == "sofaset") {
-            flip = true;
-        }
-        if (name == "carpet") {
-            flip = true;
-        }
-        if (name == "bookshelf") {
-            flip = true;
-            s.move({0.f, 20.f});
-        }
-        if (name == "lamp") {
-            s.setScale({scale + 0.35f, scale + 0.35f});
-            s.move({2.f, 15.f});
-        }
-        if (name == "fire") {
-            flip = true;
-            s.move({5.f, 17.f});
-        }
-        if (name == "diningtable") {
-            flip = true;
-             s.move({0.f, -5.f});
-        }
-        if (name == "bed") {
-            flip = true;
-            s.move({-5.f, 35.f});
-        }
-        if (name == "sink") {
-            flip = true;
-            s.move({-20.f, 10.f});
-        }
-        if (name == "dishwasher") {
-            flip = true;
-            s.move({-17.f, 3.5f});
-        }
-        if (name == "tablelamp") {
-            flip = true;
-            s.move({-5.f, 9.f});
-        }
-        if (name == "smallphoto") {
-            s.move({-20.f, -30.f});
-        }
-        if (name == "hanger") {
-            flip = true;
-            s.move({0.f, -25.f});
-        }
-        if (flip) scaleX = scale;
-        s.setScale({scaleX, scale});
-        mRoomObjects.push_back(s);
-    }
-}
-
-void Interior::draw(RenderTarget& target, float playerY, function<void()> drawPlayerFunc) {
+void Interior::draw(RenderTarget& target, Vector2f playerWorldPos, function<void()> drawPlayerFunc, bool isEditing) {
     target.draw(mMesh, &mFloorTexture);
     target.draw(mWallMesh);
 
+    for (const auto& prop : mPlacedObjects) {
+        if (prop.name == "carpet") {
+            target.draw(prop.sprite);
+        }
+    }
+
     vector<pair<float, function<void()>>> renderQueue;
 
-    for (const auto& prop : mRoomObjects) {
+    Vector2f playerGrid = IisoToGrid(playerWorldPos.x, playerWorldPos.y);
+    int playerGridX = static_cast<int>(round(playerGrid.x));
+    int playerGridY = static_cast<int>(round(playerGrid.y));
+
+    for (const auto& prop : mPlacedObjects) {
+        float sortingY = prop.sprite.getPosition().y;
+
+        if (mFurnitureDef.count(prop.name)) {
+            const auto& def = mFurnitureDef.at(prop.name);
+
+            if (prop.name == "carpet") continue;
+
+            if (!def.footprint.empty()) {
+                float minDiff = 1000000.f;
+                float bestY = sortingY;
+                for (const auto& offset : def.footprint) {
+                    int tileX = prop.gridX + offset.x;
+                    int tileY = prop.gridY + offset.y;
+
+                    int dx = abs(tileX - playerGridX);
+                    int dy = abs(tileY - playerGridY);
+                    float dist = dx + dy;
+                    if (dist < minDiff) {
+                        minDiff = dist;
+                        Vector2f tilePos = IgridToIso(tileX, tileY);
+                        bestY = tilePos.y + TILE_HEIGHT / 2.f;
+                    }
+                }
+                sortingY = bestY;
+            }
+        }
         renderQueue.push_back({ 
-            prop.getPosition().y, 
-            [&prop, &target]() { target.draw(prop); } 
+            sortingY, 
+            [&prop, &target]() { target.draw(prop.sprite); } 
         });
     }
 
@@ -225,7 +360,7 @@ void Interior::draw(RenderTarget& target, float playerY, function<void()> drawPl
         [&]() { target.draw(mComputerSprite); }
     });
     renderQueue.push_back({
-        playerY,
+        playerWorldPos.y - 0.5f,
         drawPlayerFunc
     });
 
@@ -276,7 +411,40 @@ void Interior::draw(RenderTarget& target, float playerY, function<void()> drawPl
     debugComputer.setOutlineThickness(1.f);
 
     target.draw(debugComputer);*/
+
+    sf::ConvexShape debugTile;
+    debugTile.setPointCount(4);
+    debugTile.setFillColor(sf::Color(255, 0, 0, 150));
+    debugTile.setOutlineColor(sf::Color::Red);
+    debugTile.setOutlineThickness(1.f);
+
+    for (const auto& tile : mDebugBlockedTiles) {
+        sf::Vector2f pos = IgridToIso(tile.x, tile.y);
+
+        debugTile.setPoint(0, {0.f, 0.f});
+        debugTile.setPoint(1, {TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
+        debugTile.setPoint(2, {0.f, static_cast<float>(TILE_HEIGHT)});
+        debugTile.setPoint(3, {-TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
+
+        debugTile.setPosition(pos);
+        target.draw(debugTile);
+    }
+
+    if (isEditing) {
+        for (const auto& tile : mBlockedTiles) {
+            sf::Vector2f pos = IgridToIso(tile.x, tile.y);
+            debugTile.setPoint(0, {0.f, 0.f});
+            debugTile.setPoint(1, {TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
+            debugTile.setPoint(2, {0.f, static_cast<float>(TILE_HEIGHT)});
+            debugTile.setPoint(3, {-TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
+            debugTile.setPosition(pos);
+            target.draw(debugTile);
+        }
+        if (mSelectedObject) {
+        }
+    }
 }
+
 
 Vector2f Interior::IgridToIso(int x, int y) {
     float isoX = (x - y) * (TILE_WIDTH / 2.f);
@@ -331,6 +499,11 @@ bool Interior::isPositionBlocked(Vector2f worldPos) {
     if (gridX < 0 || gridX >= ROOM_WIDTH || gridY < 0 || gridY >= ROOM_HEIGHT) {
         return true;
     }
+    for (const auto& block : mBlockedTiles) {
+        if (block.x == gridX && block.y == gridY) {
+            return true; 
+        }
+    }
     return false;
 }
 
@@ -340,9 +513,9 @@ bool Interior::isComputer(Vector2f playerPos) {
     int gridX = static_cast<int>(grid.x);
     int gridY = static_cast<int>(grid.y);
 
-     if (gridX == 1 && gridY == 2 ||
-        gridX == 2 && gridY == 2||
-        gridX == 2 && gridY == 3) {
+     if (gridX == 1 && gridY == 3 ||
+        gridX == 1 && gridY == 2||
+        gridX == 2 && gridY == 2) {
             return true;
         }
     return false;
@@ -446,4 +619,22 @@ void Interior::generateWalls() {
         {backCorner.x + thickVecLeft.x, backCorner.y - WALL_HEIGHT + thickVecLeft.y},
         rimColorTop
     );
+}
+
+void Interior::addBlock(int x, int y, int w, int h) {
+    for (int i = 0; i < w; i++) {
+        for (int j = 0; j < h; j++) {
+            mBlockedTiles.push_back({x + i, y + j});
+        }
+    }
+}
+
+void Interior::deselectAndRefresh() {
+    if (mSelectedObject) {
+        mSelectedObject->isBeingDragged = false;
+        mSelectedObject->sprite.setColor(Color::White);
+        mSelectedObject = nullptr;
+    }
+    saveFurnitureLayout();
+    rebuildCollisions();
 }
