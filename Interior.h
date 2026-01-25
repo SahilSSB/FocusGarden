@@ -28,7 +28,6 @@ class Interior {
         void saveFurnitureLayout();
         void defineFurniture();
         void addObject(const string& name, int x, int y);
-        void addBlock(int x, int y, int w, int h);
         void rebuildCollisions();
         void loadFurnitureLayout();
         void deselectAndRefresh();
@@ -46,17 +45,12 @@ class Interior {
         const float START_X = 400.f;
         const float START_Y = 120.f;
         
-        vector<Tile> mRoomGrid;
         sf::Texture mFloorTexture;
         sf::Texture mComputerTexture;
         sf::Sprite mComputerSprite; 
         sf::VertexArray mMesh;
         sf::VertexArray mWallMesh;
-        sf::Texture mRightWallTexture;
-        sf::Texture mLeftWallTexture;
-        vector<sf::Sprite> mWallSprites;
         map<string, sf::Texture> mInteriorTexture;
-        vector<sf::Sprite> mRoomObjects;
         vector<sf::Vector2i> mDebugBlockedTiles;
 
         map<string, Furniture> mFurnitureDef;

@@ -27,7 +27,7 @@ class World {
     public:
         World();
         void init();
-        void update(Time dt, bool isFocussing, float focusTimerDuration = 600.f);
+        void update(Time dt, bool isGrowing, float growthProgress);
         void draw(RenderTarget& target);
         void setHoveredTile(Vector2i gridPos);
 
@@ -41,6 +41,9 @@ class World {
         Vector2i isoToGrid(float x, float y);
 
         //mechanics
+        void destroyActiveSapling();
+        void completeTreeGrowth();
+        Vector2i getActiveSaplingPos() const { return mActiveSapling; }
         void plantTree(int x, int y);
         void burnTree(int x, int y);
         void toggleTree(int x, int y);
@@ -86,9 +89,6 @@ class World {
         vector<Cloud> mClouds;
         vector<Bird> mBirds;
 
-        void addBlock(VertexArray& mesh, int x, int y, const Vector2f& uvTop,
-                    const Vector2f& uvSide, bool leftWall, bool rightWall);
-        void addWaterBlock(int x, int y);
         void addRock(int x, int y, int variant);
 
         Player mPlayer;

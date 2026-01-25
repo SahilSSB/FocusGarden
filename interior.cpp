@@ -620,15 +620,6 @@ void Interior::generateWalls() {
         rimColorTop
     );
 }
-
-void Interior::addBlock(int x, int y, int w, int h) {
-    for (int i = 0; i < w; i++) {
-        for (int j = 0; j < h; j++) {
-            mBlockedTiles.push_back({x + i, y + j});
-        }
-    }
-}
-
 void Interior::deselectAndRefresh() {
     if (mSelectedObject) {
         mSelectedObject->isBeingDragged = false;

@@ -325,24 +325,41 @@ void World::init() {
     initInterior();
 }
 
-void World::update(Time dt, bool isFocussing, float focusTimerDuration) {
-    GameState currentState = isFocussing ? GameState::FOCUSSING : GameState ::ROAMING;
+void World::update(Time dt, bool isGrowing, float growthProgress) {
+    GameState currentState = isGrowing ? GameState::FOCUSSING : GameState ::ROAMING;
     mPlayer.update(dt, currentState);
     updateEnvironment(dt);
-    if (!isFocussing) {
+    if (!isGrowing) {
         Vector2i facingTile = getFacingTile();
         setHoveredTile(facingTile);
         return;
-    } 
-    float growthSpeed = 1.f / focusTimerDuration;
-    for (auto& tile : mGrid) {
-        if (tile.hasTree) {
-            if (tile.growthState < 1.f) {
-                tile.growthState += growthSpeed * dt.asSeconds();
-                
-                if (tile.growthState > 1.f) tile.growthState = 1.f;
+    }
+    if (mActiveSapling.x != -1) {
+    int index = mActiveSapling.x + mActiveSapling.y * MAP_WIDTH;
+    if (mGrid[index].hasTree) {
+        mGrid[index].growthState = growthProgress;
+        if (mGrid[index].growthState > 1.f) {
+             mGrid[index].growthState = 1.f;
             }
         }
+    }
+}
+
+void World::destroyActiveSapling() {
+    if (mActiveSapling.x != -1) {
+        int index = mActiveSapling.x + mActiveSapling.y * MAP_WIDTH;
+        mGrid[index].hasTree = false;
+        mGrid[index].growthState = 0.f;
+        mActiveSapling = {-1, -1};
+        cout << "Tree destroyed due to cancelled session!" << endl;
+    }
+}
+
+void World::completeTreeGrowth() {
+    if (mActiveSapling.x != -1) {
+        int index = mActiveSapling.x + mActiveSapling.y * MAP_WIDTH;
+        mGrid[index].growthState = 1.f;
+        cout << "Tree fully grown! Session complete!" << endl;
     }
 }
 
@@ -634,10 +651,6 @@ Vector2i World::isoToGrid(float x, float y) {
     int gridX = static_cast<int>(floor((adjY / halfH + adjX / halfW) / 2.f));
     int gridY = static_cast<int>(floor((adjY/ halfH - adjX / halfW) / 2.f));
     return Vector2i(gridX, gridY);
-}
-
-void World::finishSession() {
-    mActiveSapling = {-1, -1};
 }
 
 void World::save(const string& filename) {
