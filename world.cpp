@@ -325,7 +325,7 @@ void World::init() {
     initInterior();
 }
 
-void World::update(Time dt, bool isFocussing) {
+void World::update(Time dt, bool isFocussing, float focusTimerDuration) {
     GameState currentState = isFocussing ? GameState::FOCUSSING : GameState ::ROAMING;
     mPlayer.update(dt, currentState);
     updateEnvironment(dt);
@@ -334,7 +334,7 @@ void World::update(Time dt, bool isFocussing) {
         setHoveredTile(facingTile);
         return;
     } 
-    float growthSpeed = 1.f / 10.f;
+    float growthSpeed = 1.f / focusTimerDuration;
     for (auto& tile : mGrid) {
         if (tile.hasTree) {
             if (tile.growthState < 1.f) {

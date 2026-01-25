@@ -434,7 +434,7 @@ void Game::update(Time dt) {
     }
     mComputerText.setString(stateLabel + "\n" + minStr + ":" + secStr + "\n\n" + status);
     
-    mWorld.update(dt, mIsFocussing);
+    mWorld.update(dt, mIsFocussing, mFocusTimer);
 
     Vector2f targetPos = mWorld.getPlayerPosition();
 
@@ -619,8 +619,10 @@ void Game::render() {
         Text computerStatus = mStatusText;
         computerStatus.setPosition({320.f, 320.f});
         computerStatus.setFillColor(sf::Color::Green); 
-        if (mIsFocussing) computerStatus.setString("SESSION ACTIVE...");
-        mWindow.draw(computerStatus);
+        if (mIsFocussing && mTimeSinceInput <= IDLE_THRESHOLD) {
+             computerStatus.setString("SESSION ACTIVE...");
+            mWindow.draw(computerStatus);
+        }
     }
 
     if (mShowDoorPrompt || mShowExitPrompt) {

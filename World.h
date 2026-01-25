@@ -27,7 +27,7 @@ class World {
     public:
         World();
         void init();
-        void update(Time dt, bool isFocussing);
+        void update(Time dt, bool isFocussing, float focusTimerDuration = 600.f);
         void draw(RenderTarget& target);
         void setHoveredTile(Vector2i gridPos);
 
