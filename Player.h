@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <cmath>
 #include <functional>
+#include <SFML/Audio.hpp>
 #include "GameState.h"
 using namespace std;
 
@@ -30,7 +31,7 @@ class Player {
         const int FRAME_HEIGHT = 22;
         const int NUM_FRAMES = 3;
 
-        int characterStartY = 31;
+        int characterStartY = 122;
 
         //state
         sf::Vector2f mVelocity;
@@ -49,5 +50,11 @@ class Player {
         //helpers
         void updateAnimation(sf::Time dt);
         void handleInput(GameState state);
+
+        vector<sf::SoundBuffer> mStepBuffer;
+        sf::SoundBuffer mDummyBuffer;
+        sf::Sound mStepSound;
+        float mStepTimer = 0.25f;
+        const float STEP_INTERVAL = 0.25f;
 
 };

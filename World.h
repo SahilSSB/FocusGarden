@@ -1,5 +1,6 @@
 #pragma once 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -22,6 +23,14 @@ struct Bird {
 
     Bird(const Texture& tex) : sprite(tex) {}
 };
+
+struct Particle {
+    Vector2f position;
+    Vector2f velocity;
+    float life;
+    float maxLife;
+};
+
 
 class World {
     public:
@@ -67,6 +76,10 @@ class World {
 
         Interior& getInterior() { return mInterior; }
         void initInterior() { mInterior.init(); }
+
+        void drawParticle(RenderTarget& target);
+        Color getAmbientLight() const;
+        void debugClick(sf::Vector2f mousePos);
         
     private:
         const int MAP_WIDTH = 20;
@@ -81,6 +94,10 @@ class World {
         ConvexShape mHoverShape;
         bool mCheckCollision = true;
         
+        float mTimeOfDay = 12.f;
+        const float TIME_SPEED = 1.f;
+        Color mAmbientLight = Color(255, 255, 255);
+        
         vector<Tile> mGrid;
         Vector2i mActiveSapling = {-1, -1};
         VertexArray mTerrainMesh;
@@ -89,8 +106,20 @@ class World {
         vector<Cloud> mClouds;
         vector<Bird> mBirds;
 
-        void addRock(int x, int y, int variant);
+        vector<Particle> mFireflies;
 
+        void addRock(int x, int y, int variant);
+        void updateDayNightCycle(Time dt);
+        void updateFireFlies(Time dt);
+        void addWindowGlow(VertexArray& va, Vector2f center,
+                            Vector2f size, Color color,
+                            float skewFactor);
+        void addGradientBlob(VertexArray& va,
+                             Vector2f center,
+                             float radiusX,
+                             float radiusY,
+                             Color color);
+            
         Player mPlayer;
         Interior mInterior;
 
@@ -111,5 +140,7 @@ class World {
         Texture mRockTexture4;
         Texture mRockTexture5;
         Texture mWaterTexture;
+
+        Music mBgMusic;
 
 };

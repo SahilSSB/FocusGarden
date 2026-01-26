@@ -76,6 +76,16 @@ void World::init() {
     }
     mHouseSprite.setTexture(mHouseTexture);
 
+    if (mBgMusic.openFromFile("sounds/bgm/A cup of tea.wav")) {
+        mBgMusic.setLooping(true);
+        mBgMusic.setVolume(25.f);
+
+        mBgMusic.play();
+    }
+    else {
+        cout << "Error: Could not open music file" << endl;
+    }
+
     mHoverShape.setPointCount(4);
     mHoverShape.setPoint(0, {0.f, 0.f});
     mHoverShape.setPoint(1, {TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f});
@@ -833,6 +843,8 @@ void World::updateEnvironment(Time dt) {
             bird.velocity.y = driftY;
         }
     }
+    updateDayNightCycle(dt);
+    updateFireFlies(dt);
 }
 
 void World::addRock(int x, int y, int variant) {
@@ -858,5 +870,112 @@ void World::addRock(int x, int y, int variant) {
                 mGrid[targetIdx].isSolid = true;
             }
         }
+    }
+}
+
+void World::updateDayNightCycle(Time dt) {
+    mTimeOfDay += dt.asSeconds() * TIME_SPEED;
+    if (mTimeOfDay >= 24.f) mTimeOfDay -= 24.f;
+
+    float sunAngle = (mTimeOfDay / 24.f) * 2.f * 3.14159f;
+    float sunIntensity = (sin((mTimeOfDay / 24.f) * 6.28f - 1.57f) + 1.f) / 2.f;
+
+    uint8_t r = static_cast<uint8_t>(30 + (225 * sunIntensity));
+    uint8_t g = static_cast<uint8_t>(30 + (225 * sunIntensity));
+    uint8_t b = static_cast<uint8_t>(80 + (175 * sunIntensity));
+
+    mAmbientLight = Color(r, g, b);
+}
+
+void World::updateFireFlies(Time dt) {
+    bool isNight = (mAmbientLight.r < 150);
+
+    if (isNight && mFireflies.size() < 30) {
+        if (rand() % 50 == 0) {
+            Particle p;
+            p.position = gridToIso(rand() % MAP_WIDTH, rand() % MAP_HEIGHT);
+            p.position.y -= (rand() % 50 + 20);
+            p.velocity = { (rand() % 10 - 5.f) * 2.f,
+                            (rand() % 10 - 5.f) * 2.f};
+            p.maxLife = (rand() % 3) + 2.f;
+            p.life = p.maxLife;
+            mFireflies.push_back(p);
+        }
+    }
+
+    for (auto it = mFireflies.begin(); it != mFireflies.end();) {
+        it->position += it->velocity * dt.asSeconds();
+        it->life -= dt.asSeconds();
+
+        if (it->life <= 0.f) {
+            it = mFireflies.erase(it);
+        }
+        else ++it;
+    }
+}
+
+Color World::getAmbientLight() const {
+    return mAmbientLight;
+}
+
+void World::drawParticle(RenderTarget& target) {
+    if (mAmbientLight.r < 100) {
+        VertexArray glowMesh(sf::PrimitiveType::Triangles);
+        
+        float centerGridX = HOUSE_X + (HOUSE_W / 2.f);
+        float centerGridY = HOUSE_Y + (HOUSE_H / 2.f);
+    
+        Vector2f houseBase = gridToIso(centerGridX, centerGridY);
+        Color warmLight(255, 200, 100, 100);
+
+        if (mAmbientLight.r < 100) {
+        glowMesh.clear();
+        Color haloColor(255, 210, 120, 160); 
+        Color puddleColor(255, 180, 50, 100);
+        Vector2f w1Pos = {houseBase.x + (-58.1f), houseBase.y + (-22.075f)};
+        addGradientBlob(glowMesh, w1Pos, 15.f, 20.f, haloColor);
+        Vector2f w2Pos = {houseBase.x + (-38.525f), houseBase.y + (-11.2f)};
+        addGradientBlob(glowMesh, w2Pos, 15.f, 20.f, haloColor);
+        addGradientBlob(glowMesh, {w2Pos.x - 15.f, w2Pos.y + 35.f}, 35.f, 20.f, puddleColor);
+        Vector2f w3Pos = {houseBase.x + (77.475f), houseBase.y + (6.925f)};
+        addGradientBlob(glowMesh, w3Pos, 18.f, 24.f, haloColor);        
+        addGradientBlob(glowMesh, {w3Pos.x + 15.f, w3Pos.y + 45.f}, 45.f, 25.f, puddleColor);
+
+        target.draw(glowMesh, sf::BlendAdd);
+    }
+    }
+    if (mAmbientLight.r < 100) {
+        CircleShape glow(3.f);
+        glow.setFillColor(Color(255, 255, 150));
+
+        for (const auto& p : mFireflies) {
+            float fade = p.life / p.maxLife;
+            Color c = glow.getFillColor();
+            c.a = static_cast<uint8_t>(fade * 255);
+            glow.setFillColor(c);
+            glow.setPosition(p.position);
+            target.draw(glow);
+        }
+    }
+}
+
+
+void World::addGradientBlob(VertexArray& va, Vector2f center, float radiusX, float radiusY, Color color) {
+    int segments = 20;
+    float angleStep = 6.28318f / segments;
+    
+    Color edgeColor = color;
+    edgeColor.a = 0;
+
+    for (int i = 0; i < segments; ++i) {
+        float angle1 = i * angleStep;
+        float angle2 = (i + 1) * angleStep;
+
+        Vector2f p1 = {center.x + cos(angle1) * radiusX, center.y + sin(angle1) * radiusY};
+        Vector2f p2 = {center.x + cos(angle2) * radiusX, center.y + sin(angle2) * radiusY};
+
+        va.append(Vertex({center, color}));
+        va.append(Vertex({p1, edgeColor}));
+        va.append(Vertex({p2, edgeColor}));
     }
 }

@@ -1,0 +1,31 @@
+========================================================================
+                      THIRD-PARTY ASSETS LICENSE
+========================================================================
+This project uses public domain (CC0) assets. 
+While attribution is not legally required, the following credits are 
+provided to acknowledge the original authors.
+
+------------------------------------------------------------------------
+
+ASSET: Lofi Compilation
+AUTHOR: Tad Miller (TAD)
+SOURCE: https://opengameart.org/content/lofi-compilation
+LICENSE: CC0 1.0 Universal (Public Domain)
+
+TERMS:
+- No copyright.
+- You can copy, modify, distribute and perform the work, even for 
+  commercial purposes, all without asking permission.
+
+------------------------------------------------------------------------
+
+ASSET: Impact Sounds
+AUTHOR: Kenney
+SOURCE: https://kenney.nl/assets/impact-sounds
+LICENSE: CC0 1.0 Universal (Public Domain)
+
+TERMS:
+- No copyright.
+- No attribution required (but appreciated).
+
+------------------------------------------------------------------------

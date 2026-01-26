@@ -282,7 +282,7 @@ void Interior::loadTextures() {
         Image img;
         if (img.loadFromFile(path)) {
             Texture tex;
-            tex.loadFromImage(img);
+            [[maybe_unused]] bool loaded = tex.loadFromImage(img);
             mInteriorTexture[name] = tex;
         }
         else {

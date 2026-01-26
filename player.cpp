@@ -5,15 +5,19 @@ using namespace sf;
 
 const float PI = 3.14159265f;
 
-Player::Player() : mSprite(mTexture) {
-
-}
+Player::Player() : mSprite(mTexture),
+                   mStepSound(mDummyBuffer)
+{}
 
 void Player::init(const string& texturePath) {
     if (!mTexture.loadFromFile(texturePath)) {
         throw runtime_error("Could not load Texture. Is it in the correct folder?");
     }
     mSprite.setTexture(mTexture);
+
+    SoundBuffer b1, b2;
+    if (b1.loadFromFile("sounds/footsteps/walk_1.ogg")) mStepBuffer.push_back(b1);
+    if (b2.loadFromFile("sounds/footsteps/walk_2.ogg")) mStepBuffer.push_back(b2);
 
     float frameWidth = 16.f;
     float frameHeight = 24.f;
@@ -71,6 +75,24 @@ void Player::update(Time dt, GameState currentState) {
         int rectTop = characterStartY;
         mSprite.setTextureRect(IntRect({rectLeft, rectTop}, {FRAME_WIDTH, FRAME_HEIGHT}));
     }
+
+    bool isMoving = (mVelocity.x !=0 || mVelocity.y !=0);
+    if (isMoving && (currentState == GameState::ROAMING && currentState != GameState::INSIDE_HOUSE)) {
+        mStepTimer += dt.asSeconds();
+
+        if (mStepTimer >= STEP_INTERVAL) {
+            int idx = rand() % mStepBuffer.size();
+            mStepSound.setBuffer(mStepBuffer[idx]);
+            mStepSound.setPitch(1.f + (rand() % 20) / 100.f);
+            mStepSound.setVolume(10.f);
+            mStepSound.play();
+            mStepTimer = 0.f;
+        }
+    }
+    else {
+        mStepTimer = STEP_INTERVAL;
+    }
+
 }
 
 void Player::handleInput(GameState state) {

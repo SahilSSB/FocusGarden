@@ -20,15 +20,19 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mEditModeText(mFont),
         mWarningText(mFont),
         mWarningYesText(mFont),
-        mWarningNoText(mFont)
+        mWarningNoText(mFont),
+        mSceneSprite(mSceneTexture.getTexture())
 
 {
     mWindow.setFramerateLimit(60);
-    ContextSettings settings;
-    settings.antiAliasingLevel = 0;
     mIsPaused = false;
     mMenuBackrgound.setSize(Vector2f({800,600}));
     mMenuBackrgound.setFillColor(Color(0, 0, 0, 150));
+
+    if (!mSceneTexture.resize({800, 600})) {
+        cerr << "Failed to create scene texture" << endl;
+    }
+    mSceneTexture.setSmooth(false);
 
     mResumeText.setString("Resume");
     mResumeText.setCharacterSize(40);
@@ -398,6 +402,8 @@ void Game::handleRoamingInput(const Event& event) {
     }
 
     if (const auto* mousePress = event.getIf<Event::MouseButtonPressed>()) {
+        Vector2i pixelPos = mousePress->position;
+        Vector2f worldPos = mWindow.mapPixelToCoords(pixelPos, mWorldView);
         if (mousePress->button == Mouse::Button::Left) {
             if (!mSessionManager.isActive()) {
                 Vector2i pixelPos = mousePress->position;
@@ -476,6 +482,10 @@ void Game::handleRoamingInput(const Event& event) {
 void Game::handleWindowResize(const Event::Resized& resized) {
     float w = static_cast<float>(resized.size.x);
     float h = static_cast<float>(resized.size.y);
+
+   if (!mSceneTexture.resize({resized.size.x, resized.size.y})) {
+        cerr << "Failed to reize scene texture" << endl;
+   }
     
     mUIView.setSize({w, h});
     mUIView.setCenter({w / 2.f, h / 2.f});
@@ -618,11 +628,11 @@ void Game::updateComputerUIText() {
 
 void Game::render() {
     
-    mWindow.clear(sf::Color(135, 206, 235));
-    mWindow.setView(mWorldView);
+    mSceneTexture.clear(Color(135, 206, 235));
+    mSceneTexture.setView(mWorldView);
 
     if (mState == GameState::ROAMING) {
-        mWorld.draw(mWindow);
+        mWorld.draw(mSceneTexture);
     }
     else if (mState == GameState::INSIDE_HOUSE) {
         mWindow.clear(sf::Color::Black);
@@ -630,10 +640,10 @@ void Game::render() {
         if (!mShowComputerUI) {
             Vector2f playerPos = mWorld.getPlayerPosition();
             mWorld.getInterior().draw(
-                mWindow,
+                mSceneTexture,
                 playerPos,
                 [&]() { 
-                    mWorld.drawPlayer(mWindow);
+                    mWorld.drawPlayer(mSceneTexture);
                     float w = 20.f;
                     float h = 12.f;
                     Vector2f pos = mWorld.getPlayerPosition();
@@ -655,12 +665,32 @@ void Game::render() {
             dot.setFillColor(sf::Color::Red);
             dot.setOrigin({3, 3});
             dot.setPosition(mWorld.getPlayerPosition());
-            mWindow.draw(dot);
+            mSceneTexture.draw(dot);
             // -----------------
         }
     }
-
+    mSceneTexture.display();
+    
+    mWindow.clear();
     mWindow.setView(mWindow.getDefaultView());
+    
+    mSceneSprite.setTexture(mSceneTexture.getTexture(), true);
+    if (mState == GameState::INSIDE_HOUSE) {
+        mSceneSprite.setColor(Color::White);
+    }
+    else {
+        mSceneSprite.setColor(mWorld.getAmbientLight());
+    }
+    mWindow.draw(mSceneSprite);
+
+    if (mState == GameState::ROAMING) {
+        mWindow.setView(mWorldView);
+
+        RenderStates glowState;
+        glowState.blendMode = BlendAdd;
+        mWorld.drawParticle(mWindow);
+        mWindow.setView(mWindow.getDefaultView());
+    }
 
     if (mShowComputerUI) {
         float alpha = 255.f;
@@ -803,3 +833,4 @@ void Game::handlePauseMenuInput(const Event& event) {
         }
     }
 }
+
