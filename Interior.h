@@ -7,6 +7,7 @@
 #include <string>
 #include <fstream>
 #include <functional>
+#include <algorithm>
 using namespace std;
 
 class Interior {
