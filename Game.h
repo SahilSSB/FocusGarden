@@ -61,8 +61,7 @@ class Game {
         sf::Text mWarningYesText;
         sf::Text mWarningNoText;
 
-        sf::RenderTexture mSceneTexture; 
-        sf::Sprite mSceneSprite;
+        sf::RenderTexture mSceneTexture;
 
         void setupCallbacks();
         void updateComputerUIText();

@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <fstream>
+#include <functional>
 using namespace std;
 
 class Interior {

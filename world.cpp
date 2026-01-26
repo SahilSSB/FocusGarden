@@ -782,11 +782,11 @@ bool World::checkDoorEntry(Vector2f playerPos) {
 }
 
 void World::initEnvironment() {
-    if(!mCloudTexture.loadFromFile("textures/cloud.png")) {
-        throw runtime_error("Wanring: cloud textures not found");
+    if(!mCloudTexture.loadFromFile("textures/house/cloud.png")) {
+        cerr << "Wanring: cloud textures not found" << endl;
     }
-    if (!mBirdTexture.loadFromFile("textures/cloud.png")) {
-        throw runtime_error("Warning: bird textures not found");
+    if (!mBirdTexture.loadFromFile("textures/house/cloud.png")) {
+        cerr << "Warning: bird textures not found" << endl;
     }
     for (int i = 0; i < 5; ++i) {
         Cloud c(mCloudTexture);

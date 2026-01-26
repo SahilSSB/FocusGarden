@@ -20,8 +20,7 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mEditModeText(mFont),
         mWarningText(mFont),
         mWarningYesText(mFont),
-        mWarningNoText(mFont),
-        mSceneSprite(mSceneTexture.getTexture())
+        mWarningNoText(mFont)
 
 {
     mWindow.setFramerateLimit(60);
@@ -97,8 +96,7 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mWorld.load("garden.dat");
 
         mWorld.getPlayer().setCollissionCallback([this](Vector2f pos) {
-            GameState state;
-            if (state == GameState::INSIDE_HOUSE) {
+            if (mState == GameState::INSIDE_HOUSE) {
             float width = 20.f;
             float depth = 12.f;
 
@@ -480,15 +478,18 @@ void Game::handleRoamingInput(const Event& event) {
     }  
 }
 void Game::handleWindowResize(const Event::Resized& resized) {
-    float w = static_cast<float>(resized.size.x);
-    float h = static_cast<float>(resized.size.y);
 
-   if (!mSceneTexture.resize({resized.size.x, resized.size.y})) {
-        cerr << "Failed to reize scene texture" << endl;
-   }
+    Vector2u physicalSize = mWindow.getSize();
+
+    if (physicalSize.x < 100 || physicalSize.y < 100) {
+        return; 
+    }
     
+    float w = static_cast<float>(physicalSize.x);
+    float h = static_cast<float>(physicalSize.y);
     mUIView.setSize({w, h});
     mUIView.setCenter({w / 2.f, h / 2.f});
+    float internalHeight = 540.f;
     FloatRect currentMapBounds;
     if (mState == GameState::INSIDE_HOUSE ||
         mState == GameState::COMPUTER_IDLE ||
@@ -500,7 +501,11 @@ void Game::handleWindowResize(const Event::Resized& resized) {
         currentMapBounds = mWorld.getBounds();
     }
     float mapHeight = currentMapBounds.size.y;
-    float desiredZoom = mapHeight / (w / 2.f);
+    float desiredZoom = 1.f;
+    if (w > 0.1f) {
+        desiredZoom = mapHeight / (w / 2.f);
+    }
+    if (desiredZoom < 0.1f) desiredZoom = 0.1f;
     mWorldView.setSize({w * desiredZoom, h * desiredZoom});
     Vector2f finalCenter = currentMapBounds.getCenter();
     if (mState == GameState::INSIDE_HOUSE ||
@@ -674,14 +679,20 @@ void Game::render() {
     mWindow.clear();
     mWindow.setView(mWindow.getDefaultView());
     
-    mSceneSprite.setTexture(mSceneTexture.getTexture(), true);
+    Vector2f currentViewSize = mWindow.getView().getSize();
+    RectangleShape screenRect(currentViewSize);
+    screenRect.setOrigin({currentViewSize.x / 2.f, currentViewSize.y / 2.f});
+    screenRect.setPosition(mWindow.getView().getCenter());
+    
+    screenRect.setTexture(&mSceneTexture.getTexture());
+
     if (mState == GameState::INSIDE_HOUSE) {
-        mSceneSprite.setColor(Color::White);
+        screenRect.setFillColor(Color::White);
     }
     else {
-        mSceneSprite.setColor(mWorld.getAmbientLight());
+        screenRect.setFillColor(mWorld.getAmbientLight());
     }
-    mWindow.draw(mSceneSprite);
+    mWindow.draw(screenRect);
 
     if (mState == GameState::ROAMING) {
         mWindow.setView(mWorldView);
