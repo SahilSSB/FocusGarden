@@ -63,6 +63,9 @@ class Game {
 
         sf::RenderTexture mSceneTexture;
 
+        sf::Texture mCursorTexture;
+        sf::Sprite mCursorSprite;
+
         void setupCallbacks();
         void updateComputerUIText();
 };

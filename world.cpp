@@ -667,7 +667,11 @@ void World::save(const string& filename) {
     ofstream file(filename);
 
     if (file.is_open()) {
+        file << MAP_WIDTH << " " << MAP_HEIGHT << "\n";
         for (const auto& tile : mGrid) {
+            int type = 0;
+            if (tile.isWater) type = 1;
+            else if (tile.hasRock) type = 2;
             if (tile.hasTree) {
                 file << tile.x << " " << tile.y << " " << tile.growthState << "\n";
             }
@@ -784,12 +788,8 @@ bool World::checkDoorEntry(Vector2f playerPos) {
 void World::initEnvironment() {
     if(!mCloudTexture.loadFromFile("textures/cloud.png")) {
         cerr << "Wanring: cloud textures not found" << endl;
-    if(!mCloudTexture.loadFromFile("textures/house/cloud.png")) {
-        cerr << "Wanring: cloud textures not found" << endl;
     }
     if (!mBirdTexture.loadFromFile("textures/cloud.png")) {
-        cerr << "Warning: bird textures not found" << endl;
-    if (!mBirdTexture.loadFromFile("textures/house/cloud.png")) {
         cerr << "Warning: bird textures not found" << endl;
     }
     for (int i = 0; i < 5; ++i) {

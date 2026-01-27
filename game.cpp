@@ -20,18 +20,27 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mEditModeText(mFont),
         mWarningText(mFont),
         mWarningYesText(mFont),
-        mWarningNoText(mFont)
+        mWarningNoText(mFont),
+        mCursorSprite(mCursorTexture)
 
 {
     mWindow.setFramerateLimit(60);
     mIsPaused = false;
+    mWindow.setMouseCursorVisible(false);
     mMenuBackrgound.setSize(Vector2f({800,600}));
     mMenuBackrgound.setFillColor(Color(0, 0, 0, 150));
-
+    
     if (!mSceneTexture.resize({800, 600})) {
         cerr << "Failed to create scene texture" << endl;
     }
     mSceneTexture.setSmooth(false);
+    
+        if (!mCursorTexture.loadFromFile("textures/cursor.png")) {
+            cerr << "Failed to load cursor texture" << endl;
+        }
+        mCursorSprite.setTexture(mCursorTexture, true);
+        mCursorSprite.setScale({0.2f, 0.2f});
+        mCursorSprite.setOrigin({60.f, 110.f});
 
     mResumeText.setString("Resume");
     mResumeText.setCharacterSize(40);
@@ -811,6 +820,11 @@ void Game::render() {
         mWindow.draw(mEditModeText);
         mWindow.draw(mQuitText);
     }
+
+    Vector2i mousePos = Mouse::getPosition(mWindow);
+    Vector2f worldPos = mWindow.mapPixelToCoords(mousePos, mWindow.getDefaultView());
+    mCursorSprite.setPosition(worldPos);
+    mWindow.draw(mCursorSprite);
 
     mWindow.display();
 }

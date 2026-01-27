@@ -11,6 +11,12 @@ struct Tile {
     int rockVariant = 0; 
     bool isSolid = false;
     float growthState = 0.0f;
+
+    int getTerrainID() {
+        if (isWater) return 1;
+        if (hasRock) return 2;
+        return 0;
+    }
 };
 
 struct Furniture {
