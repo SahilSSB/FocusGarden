@@ -23,6 +23,132 @@ FloatRect World::getBounds() {
 return mTerrainMesh.getBounds();
 }
 
+void World::rebuildMesh() {
+    mTerrainMesh.clear();
+    mWaterMesh.clear();
+    
+    mTerrainMesh.setPrimitiveType(PrimitiveType::Triangles);
+    mWaterMesh.setPrimitiveType(PrimitiveType::Triangles);
+
+    Vector2u texSize = mTileTexture.getSize();
+    float tsX = static_cast<float>(texSize.x);
+    float tsY = static_cast<float>(texSize.y);
+    float capHeight = tsX / 1.7f;
+
+    Vector2f uvTop = {tsX/2, 0};      
+    Vector2f uvBottom = {tsX/2, capHeight}; 
+    Vector2f uvRight = {tsX, capHeight/2};  
+    Vector2f uvLeft = {0, capHeight/2}; 
+
+    Vector2f uvBaseCenter = {tsX / 2.f, tsY};
+    Vector2f uvBaseRight = {tsX, tsY - (capHeight / 2.f)};
+    Vector2f uvBaseLeft = {0.f, tsY - (capHeight / 2.f)};
+
+    Vector2u waterTexSize = mWaterTexture.getSize();
+    float wX = static_cast<float>(waterTexSize.x);
+    float wY = static_cast<float>(waterTexSize.y);
+    float waterCapHeight = wX / 1.7f;
+    
+    Vector2f wUvTop = {wX/2, 0};      
+    Vector2f wUvBottom = {wX/2, waterCapHeight}; 
+    Vector2f wUvRight = {wX, waterCapHeight/2};  
+    Vector2f wUvLeft = {0, waterCapHeight/2}; 
+    Vector2f wUVBaseCenter = {wX / 2.f, wY};
+    Vector2f wUVBaseRight = {wX, wY - (waterCapHeight / 2.f)};
+    Vector2f wUVBaseLeft = {0.f, wY - (waterCapHeight / 2.f)};
+    
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            
+            float isoX = (x - y) * (TILE_WIDTH / 2.f);
+            float isoY = (x + y) * (TILE_HEIGHT / 2.f);
+            
+            Tile& tile = mGrid[x + y * MAP_WIDTH];
+            
+            Vector2f ptTop    = {isoX, isoY};
+            Vector2f ptBottom = {isoX, isoY + TILE_HEIGHT };
+            Vector2f ptRight  = {isoX + TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
+            Vector2f ptLeft   = {isoX - TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
+            
+            Vector2f ptRightDown  = ptRight + Vector2f(0, TILE_DEPTH);
+            Vector2f ptBottomDown = ptBottom + Vector2f(0, TILE_DEPTH);
+            Vector2f ptLeftDown   = ptLeft + Vector2f(0, TILE_DEPTH);
+            
+            VertexArray* targetMesh;
+
+            if (tile.isWater) {
+                targetMesh = &mWaterMesh;
+
+                targetMesh->append(Vertex{ptTop, Color(255, 255, 255, 150), wUvTop});
+                targetMesh->append(Vertex{ptRight, Color(255, 255, 255, 150), wUvRight});
+                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255, 150 ), wUvLeft});
+                
+                targetMesh->append(Vertex{ptBottom, Color(255, 255, 255, 150 ), wUvBottom}); 
+                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255, 150 ), wUvLeft});
+                targetMesh->append(Vertex{ptRight, Color(255, 255, 255, 150), wUvRight});
+                
+                bool showRightWall = true;
+                if (x + 1 < MAP_WIDTH && mGrid[(x + 1) + y * MAP_WIDTH].isWater) {
+                    showRightWall = false;
+                }
+                
+                bool showLeftWall = true;
+                if (y + 1 < MAP_HEIGHT && mGrid[x + (y + 1) * MAP_WIDTH].isWater) {
+                    showLeftWall = false;
+                }
+
+                if (showRightWall) {
+                    Color rightShade(255, 255, 255, 150); 
+                    targetMesh->append(Vertex{ptRight,      rightShade, wUvRight});
+                    targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
+                    targetMesh->append(Vertex{ptBottom,     rightShade, wUvBottom});
+
+                    targetMesh->append(Vertex{ptBottom,     rightShade, wUvBottom});
+                    targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
+                    targetMesh->append(Vertex{ptBottomDown, rightShade, wUVBaseCenter});
+                }
+                if (showLeftWall) {
+                    Color leftShade(255, 255, 255, 150);
+                    targetMesh->append(Vertex{ptLeft,       leftShade, wUvLeft});
+                    targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
+                    targetMesh->append(Vertex{ptLeftDown,   leftShade, wUVBaseLeft});
+
+                    targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
+                    targetMesh->append(Vertex{ptBottomDown, leftShade, wUVBaseCenter});
+                    targetMesh->append(Vertex{ptLeftDown,   leftShade, wUVBaseLeft});
+                }
+            }
+            else {
+                targetMesh = &mTerrainMesh;
+
+                targetMesh->append(Vertex{ptTop,    Color::White, uvTop});
+                targetMesh->append(Vertex{ptRight,  Color::White, uvRight});
+                targetMesh->append(Vertex{ptLeft,   Color::White, uvLeft});
+
+                targetMesh->append(Vertex{ptBottom, Color::White, uvBottom});
+                targetMesh->append(Vertex{ptLeft,   Color::White, uvLeft});
+                targetMesh->append(Vertex{ptRight,  Color::White, uvRight});
+
+                Color rightShade(180, 180, 180);
+                targetMesh->append(Vertex{ptRight,      rightShade, uvRight});
+                targetMesh->append(Vertex{ptRightDown,  rightShade, uvBaseRight});
+                targetMesh->append(Vertex{ptBottom,     rightShade, uvBottom});
+                targetMesh->append(Vertex{ptBottom,     rightShade, uvBottom});
+                targetMesh->append(Vertex{ptRightDown,  rightShade, uvBaseRight});
+                targetMesh->append(Vertex{ptBottomDown, rightShade, uvBaseCenter});
+
+                Color leftShade(130, 130, 130);
+                targetMesh->append(Vertex{ptLeft,       leftShade, uvLeft});
+                targetMesh->append(Vertex{ptBottom,     leftShade, uvBottom});
+                targetMesh->append(Vertex{ptLeftDown,   leftShade, uvBaseLeft});
+                targetMesh->append(Vertex{ptBottom,     leftShade, uvBottom});
+                targetMesh->append(Vertex{ptBottomDown, leftShade, uvBaseCenter});
+                targetMesh->append(Vertex{ptLeftDown,   leftShade, uvBaseLeft});
+            }
+        }
+    }
+}
+
 void World::init() {
     if(!mTileTexture.loadFromFile("textures/tiles/Grass_tile.png")) {
         throw runtime_error("Failed to load tile texture. Is it in the correct folder?");
@@ -193,144 +319,7 @@ void World::init() {
         lakeY = max(0, min(lakeY, MAP_HEIGHT -1));
     }*/
 
-    mTerrainMesh.clear();
-    mWaterMesh.clear();
-
-    //Vertex array 
-    mTerrainMesh.setPrimitiveType(PrimitiveType::Triangles);
-    mTerrainMesh.resize(MAP_WIDTH * MAP_HEIGHT * 18);
-
-    mWaterMesh.setPrimitiveType(PrimitiveType::Triangles);
-    Vector2u waterSize = mWaterTexture.getSize();
-
-    Vector2u texSize = mTileTexture.getSize();
-    float tsX = static_cast<float>(texSize.x);
-    float tsY = static_cast<float>(texSize.y);
-
-    float capHeight = tsX / 1.7f;
-
-    //Texture Mapping
-    Vector2f uvTop = {tsX/2, 0};      
-    Vector2f uvBottom = {tsX/2, capHeight}; 
-    Vector2f uvRight = {tsX, capHeight/2};  
-    Vector2f uvLeft = {0, capHeight/2}; 
-
-    Vector2f uvBaseCenter = {tsX / 2.f, tsY};
-    Vector2f uvBaseRight = {tsX, tsY - (capHeight / 2.f)};
-    Vector2f uvBaseLeft = {0.f, tsY - (capHeight / 2.f)};
-    
-    //populate array 
-    for (int y = 0; y < MAP_HEIGHT; y++) {
-        for (int x = 0; x < MAP_WIDTH; x++) {
-            float isoX = (x - y) * (TILE_WIDTH / 2.f);
-            float isoY = (x + y) * (TILE_HEIGHT / 2.f);
-            
-            Tile& tile = mGrid[x + y * MAP_WIDTH];
-            
-            Vector2f ptTop    = {isoX, isoY};
-            Vector2f ptBottom = {isoX, isoY + TILE_HEIGHT };
-            Vector2f ptRight  = {isoX + TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
-            Vector2f ptLeft   = {isoX - TILE_WIDTH / 2.f, isoY + TILE_HEIGHT / 2.f};
-            
-            Vector2f ptRightDown  = ptRight + Vector2f(0, TILE_DEPTH);
-            Vector2f ptBottomDown = ptBottom + Vector2f(0, TILE_DEPTH);
-            Vector2f ptLeftDown   = ptLeft + Vector2f(0, TILE_DEPTH);
-            
-            VertexArray* targetMesh;
-            if (tile.isWater) {
-                targetMesh = &mWaterMesh;
-                
-                Vector2u waterTexSize = mWaterTexture.getSize();
-                float wX = static_cast<float>(waterTexSize.x);
-                float wY = static_cast<float>(waterTexSize.y);
-                
-                float waterCapHeight = wX / 1.7f;
-                
-                Vector2f wUvTop = {wX/2, 0};      
-                Vector2f wUvBottom = {wX/2, waterCapHeight}; 
-                Vector2f wUvRight = {wX, waterCapHeight/2};  
-                Vector2f wUvLeft = {0, waterCapHeight/2}; 
-                
-                Vector2f wUVBaseCenter = {wX / 2.f, wY};
-                Vector2f wUVBaseRight = {wX, wY - (waterCapHeight / 2.f)};
-                Vector2f wUVBaseLeft = {0.f, wY - (waterCapHeight / 2.f)};
-
-                targetMesh->append(Vertex{ptTop, Color(255, 255, 255, 150), wUvTop});
-                targetMesh->append(Vertex{ptRight, Color(255, 255, 255, 150), wUvRight});
-                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255, 150 ), wUvLeft});
-                
-                targetMesh->append(Vertex{ptBottom, Color(255, 255, 255, 150 ), wUvBottom}); 
-                targetMesh->append(Vertex{ptLeft, Color(255, 255, 255, 150 ), wUvLeft});
-                targetMesh->append(Vertex{ptRight, Color(255, 255, 255, 150), wUvRight});
-                
-                bool showRightWall = true;
-                if (x + 1 < MAP_WIDTH) {
-                    if (mGrid[(x + 1) + y * MAP_WIDTH].isWater) {
-                        showRightWall = false; // Neighbor is water, hide the wall!
-                    }
-                }
-                bool showLeftWall = true;
-                if (y + 1 < MAP_HEIGHT) {
-                    if (mGrid[x + (y + 1) * MAP_WIDTH].isWater) {
-                        showLeftWall = false; // Neighbor is water, hide the wall!
-                    }
-                }
-                if (showRightWall) {
-                Color rightShade(255, 255, 255, 150); 
-                
-                targetMesh->append(Vertex{ptRight,      rightShade, wUvRight});
-                targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
-                targetMesh->append(Vertex{ptBottom,     rightShade, wUvBottom});
-
-                targetMesh->append(Vertex{ptBottom,     rightShade, wUvBottom});
-                targetMesh->append(Vertex{ptRightDown,  rightShade, wUVBaseRight});
-                targetMesh->append(Vertex{ptBottomDown, rightShade, wUVBaseCenter});
-                }
-                if (showLeftWall) {
-                Color leftShade(255, 255, 255, 150);
-
-                targetMesh->append(Vertex{ptLeft,       leftShade, wUvLeft});
-                targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
-                targetMesh->append(Vertex{ptLeftDown,   leftShade, wUVBaseLeft});
-
-                targetMesh->append(Vertex{ptBottom,     leftShade, wUvBottom});
-                targetMesh->append(Vertex{ptBottomDown, leftShade, wUVBaseCenter});
-                targetMesh->append(Vertex{ptLeftDown,   leftShade, wUVBaseLeft});
-                }
-            }
-            else {
-                targetMesh = &mTerrainMesh;
-
-                targetMesh->append(Vertex{ptTop,    Color::White, uvTop});
-                targetMesh->append(Vertex{ptRight,  Color::White, uvRight});
-                targetMesh->append(Vertex{ptLeft,   Color::White, uvLeft});
-
-                targetMesh->append(Vertex{ptBottom, Color::White, uvBottom});
-                targetMesh->append(Vertex{ptLeft,   Color::White, uvLeft});
-                targetMesh->append(Vertex{ptRight,  Color::White, uvRight});
-
-                Color rightShade(180, 180, 180);
-                
-                targetMesh->append(Vertex{ptRight,      rightShade, uvRight});
-                targetMesh->append(Vertex{ptRightDown,  rightShade, uvBaseRight});
-                targetMesh->append(Vertex{ptBottom,     rightShade, uvBottom});
-
-                targetMesh->append(Vertex{ptBottom,     rightShade, uvBottom});
-                targetMesh->append(Vertex{ptRightDown,  rightShade, uvBaseRight});
-                targetMesh->append(Vertex{ptBottomDown, rightShade, uvBaseCenter});
-
-                Color leftShade(130, 130, 130);
-
-                targetMesh->append(Vertex{ptLeft,       leftShade, uvLeft});
-                targetMesh->append(Vertex{ptBottom,     leftShade, uvBottom});
-                targetMesh->append(Vertex{ptLeftDown,   leftShade, uvBaseLeft});
-
-                targetMesh->append(Vertex{ptBottom,     leftShade, uvBottom});
-                targetMesh->append(Vertex{ptBottomDown, leftShade, uvBaseCenter});
-                targetMesh->append(Vertex{ptLeftDown,   leftShade, uvBaseLeft});
-            }
-        }
-    }
+    rebuildMesh();
     initEnvironment();
     initInterior();
 }
@@ -673,7 +662,8 @@ void World::save(const string& filename) {
             if (tile.isWater) type = 1;
             else if (tile.hasRock) type = 2;
             if (tile.hasTree) {
-                file << tile.x << " " << tile.y << " " << tile.growthState << "\n";
+                file << type << tile.rockVariant << " " << tile.x
+                << " " << tile.y << " " << tile.growthState << "\n";
             }
         }
         cout << "Game Saved to " << filename << endl;
@@ -682,21 +672,48 @@ void World::save(const string& filename) {
 
 void World::load(const string& filename) {
     ifstream file(filename);
-    if (file.is_open()) {
-        int x, y;
-        float growth;
-        while (file >> x >> y >> growth) {
-            if (x >= 0 && x < MAP_WIDTH && y >=0 && y < MAP_HEIGHT) {
+    if (!file.is_open()) {
+        cout << "No save file found (NEW GAME)." << endl;
+        return;
+    }
+
+    int w, h;
+    file >> w >> h;
+    for (auto& tile : mGrid) {
+        tile.isWater = false;
+        tile.hasRock = false;
+        tile.isSolid = false;
+        tile.hasTree = false;
+        tile.growthState = 0.f;
+    }
+
+    int type, variant;
+    float growth;
+
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            if (file >> type >> variant >> growth) {
                 int index = x + y * MAP_WIDTH;
-                mGrid[index].hasTree = true;
-                mGrid[index].growthState = growth;
+                Tile& tile = mGrid[index];
+
+                if (type == 1) {
+                    tile.isWater = true;
+                }
+                else if (type == 2) {
+                    tile.hasRock = true;
+                    tile.rockVariant = variant;
+                    tile.isSolid = true;
+                }
+                if (growth > 0.f) {
+                    tile.hasTree = true;
+                    tile.growthState = growth;
+                }
+                mGrid.push_back(tile);
             }
         }
-        cout << "Game Loaded from " << filename << endl;
     }
-    else {
-        cout << "No save file found (New Game)." << endl;
-    }
+    rebuildMesh();
+    cout << "Level loaded from: " << filename << endl;
 }
 
 bool World::isPositionBlocked(Vector2f worldPos, GameState state) {

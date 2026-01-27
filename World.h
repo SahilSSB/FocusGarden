@@ -39,6 +39,7 @@ class World {
         void update(Time dt, bool isGrowing, float growthProgress);
         void draw(RenderTarget& target);
         void setHoveredTile(Vector2i gridPos);
+        void rebuildMesh();
 
         void save(const string& filename);
         void load(const string& filename);
