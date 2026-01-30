@@ -666,6 +666,10 @@ void World::save(const string& filename) {
                 << " " << tile.y << " " << tile.growthState << "\n";
             }
         }
+        int lvl = mPlayer.getLevel();
+        int curXP = mPlayer.getCurrentXP();
+        file.write(reinterpret_cast<const char*>(&lvl), sizeof(int));
+        file.write(reinterpret_cast<const char*>(&curXP), sizeof(int));
         cout << "Game Saved to " << filename << endl;
     }
 }
@@ -674,6 +678,12 @@ void World::load(const string& filename) {
     ifstream file(filename);
     if (!file.is_open()) {
         cout << "No save file found (NEW GAME)." << endl;
+        int lvl = 1;
+        int curXP = 0;
+        if (file.read(reinterpret_cast<char*>(&lvl), sizeof(int))) {
+            file.read(reinterpret_cast<char*>(&curXP), sizeof(int));
+            mPlayer.loadStats(lvl, curXP);
+        }
         return;
     }
 

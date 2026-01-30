@@ -21,7 +21,8 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
         mWarningText(mFont),
         mWarningYesText(mFont),
         mWarningNoText(mFont),
-        mCursorSprite(mCursorTexture)
+        mCursorSprite(mCursorTexture),
+        mLevelText(mFont)
 
 {
     mWindow.setFramerateLimit(60);
@@ -95,6 +96,24 @@ Game::Game() : mWindow(VideoMode({800,600}), "Focus Garden"),
     mWarningNoText.setPosition({400.f, 360.f});
 
     mShowQuitWarning = false;
+
+    float pixelScale = 4.f;
+
+    mXPBarContainer.setSize({200.f, 20.f});
+    mXPBarContainer.setFillColor(sf::Color(20, 20, 20));
+    mXPBarContainer.setOutlineColor(sf::Color::White);
+    mXPBarContainer.setOutlineThickness(-pixelScale);
+    mXPBarContainer.setPosition({20.f, 20.f});
+
+    mXPBarFill.setSize({0.f, 20.f - (pixelScale * 2)});
+    mXPBarFill.setFillColor(sf::Color(100, 255, 100));
+    mXPBarFill.setPosition({20.f + pixelScale, 20.f + pixelScale});
+
+    mLevelText.setFont(mFont);
+    mLevelText.setCharacterSize(14);
+    mLevelText.setFillColor(sf::Color::White);
+    mLevelText.setPosition({20.f, 45.f});
+    mLevelText.setString("Level 1");
 
     setupCallbacks();
 
@@ -199,6 +218,14 @@ void Game::setupCallbacks() {
         if (type == SessionType::WORK) {
             mWorld.completeTreeGrowth();
             mStatusText.setString("SESSION COMPLETE!");
+
+            int xpReward = 50;
+            bool leveledUp = mWorld.getPlayer().gainXP(xpReward);
+
+            if (leveledUp) {
+                cout << "LEVEL UP! Now Level " << mWorld.getPlayer().getLevel() << endl;
+                mStatusText.setString("LEVEL UP!");
+            }
         }
         else {
             mStatusText.setString("BREAK OVER - TIME TO FOCUS!");
@@ -601,6 +628,14 @@ void Game::update(Time dt) {
     
         mWorldView.setCenter(targetPos);
     }
+
+    float percentage = mWorld.getPlayer().getXPProgress();
+    float pixelScale = 4.f;
+    float maxBarWidth = 200.f - (pixelScale * 2);
+    float rawWidth = maxBarWidth * percentage;
+    float snappedWidth = floor(rawWidth / pixelScale) * pixelScale;
+    mXPBarFill.setSize({snappedWidth, 20.f - (pixelScale * 2)});
+    mLevelText.setString("Level " + to_string(mWorld.getPlayer().getLevel()));
 }
 
 void Game::updateComputerUIText() {
@@ -825,6 +860,10 @@ void Game::render() {
     Vector2f worldPos = mWindow.mapPixelToCoords(mousePos, mWindow.getDefaultView());
     mCursorSprite.setPosition(worldPos);
     mWindow.draw(mCursorSprite);
+
+    mWindow.draw(mXPBarContainer);
+    mWindow.draw(mXPBarFill);
+    mWindow.draw(mLevelText);
 
     mWindow.display();
 }

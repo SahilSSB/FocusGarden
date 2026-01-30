@@ -65,6 +65,10 @@ class Game {
 
         sf::Texture mCursorTexture;
         sf::Sprite mCursorSprite;
+        
+        sf::RectangleShape mXPBarContainer;
+        sf::RectangleShape mXPBarFill;
+        sf::Text mLevelText;
 
         void setupCallbacks();
         void updateComputerUIText();

@@ -4,6 +4,7 @@
 #include <functional>
 #include <SFML/Audio.hpp>
 #include "GameState.h"
+#include "ExperienceSystem.h"
 using namespace std;
 
 class Player {
@@ -20,6 +21,17 @@ class Player {
         void setCollissionCallback(function<bool(sf::Vector2f)> callback) {
             mCollisionCheck = callback;
         }
+        
+        bool gainXP(int amount) { return mXP.addXP(amount); }
+        int getLevel() const { return mXP.getLevel(); }
+        float getXPProgress() const { return mXP.getProgress(); }
+        
+        int getCurrentXP() const { return mXP.getCurrentXP(); }
+        void loadStats(int level, int xp) { 
+            mXP.setLevel(level); 
+            mXP.setCurrentXP(xp);
+        }
+        
 
     
     private:
@@ -56,5 +68,7 @@ class Player {
         sf::Sound mStepSound;
         float mStepTimer = 0.25f;
         const float STEP_INTERVAL = 0.25f;
+
+        ExperienceSystem mXP;
 
 };
